@@ -60,7 +60,8 @@ document.body.appendChild(renderer.domElement);
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x9fd3f0);
 scene.fog = new THREE.Fog(0x9fd3f0, 70, 200);
-const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 400);
+const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 400);
+camera.rotation.order = 'YXZ';
 scene.add(new THREE.HemisphereLight(0xffffff, 0x4a6b3a, 1.1));
 const sun = new THREE.DirectionalLight(0xfff2d0, 2.2);
 sun.position.set(40, 60, 20);
@@ -305,7 +306,11 @@ function updateMusic(dt) {
 }
 
 /* ---------- Personajes ---------- */
-const CHARS = [{ file: 'char_goblin', h: 1.6 }, { file: 'char_gnome', h: 1.3 }, { file: 'char_keeper', h: 1.9 }];
+// eyeY/eyeZ: posición de los ojos en el modelo original; keepY: sobre esa altura la cabeza (sombrero) sí se ve en primera persona
+const CHARS = [
+  { file: 'char_goblin', h: 1.6, eyeY: 1.36, eyeZ: 0.0, keepY: 1e9 },
+  { file: 'char_gnome', h: 1.3, eyeY: 0.88, eyeZ: 0.05, keepY: 0.94 },
+  { file: 'char_keeper', h: 1.9, eyeY: 1.57, eyeZ: 0.05, keepY: 1e9 }];
 const charP = [];
 const loadChar = i => charP[i] || (charP[i] = new Promise(res => loader.load(url('models/' + CHARS[i].file + '.glb'), res, undefined, () => res(null))));
 function play(g, n) {
@@ -322,12 +327,13 @@ function labelSprite(text) {
   s.scale.set(2.6, 0.65, 1); s.renderOrder = 10;
   return s;
 }
-function makeAvatar(name, ci) {
+function makeAvatar(name, ci, local) {
   ci = CHARS[ci] ? ci : 0;
   const g = new THREE.Group();
   const ph = new THREE.Mesh(new THREE.CapsuleGeometry(0.35, 0.8, 4, 8), new THREE.MeshStandardMaterial({ color: 0x888888 }));
   ph.position.y = 0.75; g.add(ph);
-  const lab = labelSprite(name); lab.position.y = CHARS[ci].h + 0.7; g.add(lab);
+  const lab = labelSprite(name); lab.position.y = CHARS[ci].h + 0.7; lab.visible = !local; g.add(lab);
+  const cfg = CHARS[ci];
   loadChar(ci).then(gl => {
     if (!gl) return;
     g.remove(ph);
@@ -335,6 +341,24 @@ function makeAvatar(name, ci) {
     const b = new THREE.Box3().setFromObject(m), k = CHARS[ci].h / Math.max(0.1, b.max.y - b.min.y);
     m.scale.setScalar(k); m.position.y = -b.min.y * k;
     m.traverse(o => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } });
+    g.userData.eyeY = (cfg.eyeY - b.min.y) * k; g.userData.eyeZ = cfg.eyeZ * k;
+    if (local) m.traverse(o => {
+      if (/hair/i.test(o.name)) o.visible = false;
+      if (!o.isSkinnedMesh) return;
+      const hi = o.skeleton.bones.findIndex(bn => bn.name === 'Head');
+      if (hi < 0) return;
+      const mat = o.material = o.material.clone();
+      mat.customProgramCacheKey = () => 'fp-head';
+      mat.onBeforeCompile = sh => { // oculta la cara propia (lo pegado al hueso Head) salvo el sombrero
+        sh.uniforms.uHead = { value: hi }; sh.uniforms.uKeep = { value: cfg.keepY };
+        sh.vertexShader = sh.vertexShader
+          .replace('#include <common>', '#include <common>\nvarying float vHead; varying float vBindY; uniform float uHead;')
+          .replace('#include <begin_vertex>', '#include <begin_vertex>\nvBindY = position.y;\nvHead = (abs(skinIndex.x-uHead)<0.5?skinWeight.x:0.0)+(abs(skinIndex.y-uHead)<0.5?skinWeight.y:0.0)+(abs(skinIndex.z-uHead)<0.5?skinWeight.z:0.0)+(abs(skinIndex.w-uHead)<0.5?skinWeight.w:0.0);');
+        sh.fragmentShader = sh.fragmentShader
+          .replace('#include <common>', '#include <common>\nvarying float vHead; varying float vBindY; uniform float uKeep;')
+          .replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\nif (vHead > 0.5 && vBindY < uKeep) discard;');
+      };
+    });
     g.add(m);
     const mixer = new THREE.AnimationMixer(m), acts = {};
     for (const c of gl.animations) acts[c.name] = mixer.clipAction(c);
@@ -372,7 +396,7 @@ const rndCode = () => Array.from({ length: 4 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ'
 
 function startGame() { $('lobby').style.display = 'none'; $('hud').style.display = 'block'; startMusic(); updateHud(); }
 function updateHud() {
-  $('hud').innerHTML = (roomCode ? `Sala: <b>${roomCode}</b> · ` : 'Solo · ') + `Jugadores: ${remotes.size + 1}<br>${TOUCH ? 'Joystick (izq.) mover · arrastrar (der.) cámara' : 'WASD mover · Shift correr · arrastrar = cámara · M música'}`;
+  $('hud').innerHTML = (roomCode ? `Sala: <b>${roomCode}</b> · ` : 'Solo · ') + `Jugadores: ${remotes.size + 1}<br>${TOUCH ? 'Joystick (izq.) mover · arrastrar (der.) mirar' : 'WASD mover · Shift correr · arrastrar = mirar · M música'}`;
 }
 
 function createRoom(tries = 0) {
@@ -421,7 +445,7 @@ $('solo').onclick = () => { me.name = myName(); startGame(); };
 const keys = {};
 addEventListener('keydown', e => { keys[e.code] = true; if (e.code === 'KeyM') muted = !muted; });
 addEventListener('keyup', e => { keys[e.code] = false; });
-let yaw = 0, pitch = 0.5;
+let yaw = 0, pitch = 0;
 const joy = { id: null, cx: 0, cy: 0, x: 0, y: 0 }, cam = { id: null, x: 0, y: 0 };
 const stick = $('stick'), knob = $('knob'), cv = renderer.domElement;
 cv.addEventListener('pointerdown', e => {
@@ -439,7 +463,7 @@ cv.addEventListener('pointermove', e => {
     if (l > m) { dx = dx / l * m; dy = dy / l * m; }
     joy.x = dx / m; joy.y = dy / m; knob.style.transform = `translate(${dx}px,${dy}px)`;
   } else if (e.pointerId === cam.id) {
-    yaw -= (e.clientX - cam.x) * 0.006; pitch = Math.min(1.3, Math.max(0.1, pitch + (e.clientY - cam.y) * 0.005));
+    yaw -= (e.clientX - cam.x) * 0.006; pitch = Math.min(1.4, Math.max(-1.4, pitch - (e.clientY - cam.y) * 0.005));
     cam.x = e.clientX; cam.y = e.clientY;
   }
 });
@@ -455,7 +479,7 @@ const clock = new THREE.Clock();
 const lerpAngle = (a, b, t) => a + Math.atan2(Math.sin(b - a), Math.cos(b - a)) * t;
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.1);
-  if (!me.avatar && $('lobby').style.display === 'none') me.avatar = makeAvatar(me.name, me.c);
+  if (!me.avatar && $('lobby').style.display === 'none') me.avatar = makeAvatar(me.name, me.c, true);
 
   if (me.avatar) {
     const fz = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0) - joy.y;
@@ -465,18 +489,20 @@ renderer.setAnimationLoop(() => {
     if (mag > 0.1) {
       const dx = -Math.sin(yaw) * fz + Math.cos(yaw) * fx, dz = -Math.cos(yaw) * fz - Math.sin(yaw) * fx;
       const l = Math.hypot(dx, dz); spd = (keys.ShiftLeft || (mag > 0.9 && joy.id !== null) ? 8 : 5.5) * mag;
-      me.x += dx / l * spd * dt; me.z += dz / l * spd * dt; me.ry = Math.atan2(dx, dz);
+      me.x += dx / l * spd * dt; me.z += dz / l * spd * dt;
     }
     for (const c of colliders) {
       const ox = me.x - c.x, oz = me.z - c.z, d = Math.hypot(ox, oz), min = c.r + 0.4;
       if (d < min && d > 0) { me.x = c.x + ox / d * min; me.z = c.z + oz / d * min; }
     }
     me.x = Math.max(-WORLD, Math.min(WORLD, me.x)); me.z = Math.max(-WORLD, Math.min(WORLD, me.z));
+    me.ry = yaw + Math.PI; // el cuerpo mira hacia donde mirás
     me.avatar.position.set(me.x, 0, me.z); me.avatar.rotation.y = me.ry;
     play(me.avatar, spd > 6.5 ? 'Run' : spd > 0.5 ? 'Walk' : 'Idle');
     me.avatar.userData.mixer && me.avatar.userData.mixer.update(dt);
-    camera.position.set(me.x + Math.sin(yaw) * Math.cos(pitch) * 10, 1.6 + Math.sin(pitch) * 10, me.z + Math.cos(yaw) * Math.cos(pitch) * 10);
-    camera.lookAt(me.x, 1.5, me.z);
+    const u = me.avatar.userData, ez = u.eyeZ || 0;
+    camera.position.set(me.x - Math.sin(yaw) * ez, u.eyeY || 1.5, me.z - Math.cos(yaw) * ez);
+    camera.rotation.set(pitch, yaw, 0);
   } else { camera.position.set(0, 30, 60); camera.lookAt(0, 0, -10); }
 
   for (const r of remotes.values()) {
