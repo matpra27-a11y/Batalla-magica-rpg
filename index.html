@@ -15,6 +15,7 @@
   .card{background:#1d2a1d;border:1px solid #3d5a3d;border-radius:14px;padding:22px;width:min(340px,90vw);display:flex;flex-direction:column;gap:10px;margin:auto}
   .card h1{margin:0 0 4px;font-size:22px}
   .chars{display:flex;gap:6px}.chars button{flex:1;font-size:13px;padding:9px 4px;background:#35503a}.chars button.sel{background:#4f8a3a;outline:2px solid #ffd77a}
+  #servers{display:flex;flex-direction:column;gap:6px}.srv{display:flex;justify-content:space-between;align-items:center;background:#35503a;padding:12px}.srv span{font-size:12px;font-weight:400;opacity:.85}.srv.full{opacity:.45}
   .row{display:flex;gap:8px}.row input{flex:1;text-transform:uppercase}
   #msg{min-height:1.2em;font-size:13px;color:#ffd77a}
   #card{position:fixed;top:10px;left:10px;width:150px;background:rgba(0,0,0,.5);padding:8px 10px;border-radius:10px;font-size:13px;display:none;z-index:2}
@@ -48,8 +49,13 @@
   <input id="name" maxlength="14" placeholder="Tu nombre">
   <div class="chars" id="modes"><button data-m="phone">📱 Celular</button><button data-m="pc">💻 Computadora</button></div>
   <div class="chars" id="chars"><button data-c="0" class="sel">Goblin</button><button data-c="1">Gnomo</button><button data-c="2">Domador</button></div>
-  <button id="create">Crear sala</button>
-  <div class="row"><input id="code" maxlength="4" placeholder="CÓDIGO"><button class="alt" id="join">Unirse</button></div>
+  <b style="font-size:14px">Servidores</b>
+  <div id="servers">
+    <button class="srv" data-s="1">Servidor 1<span>…</span></button>
+    <button class="srv" data-s="2">Servidor 2<span>…</span></button>
+    <button class="srv" data-s="3">Servidor 3<span>…</span></button>
+  </div>
+  <button class="alt" id="refresh">↻ Actualizar</button>
   <button class="alt" id="solo">Jugar solo</button>
   <div id="msg">Cargando mapa…</div>
 </div></div>
@@ -67,7 +73,7 @@
   <label>📱 Pantalla <select id="sOrient"><option value="auto">Automática</option><option value="h">Horizontal</option><option value="v">Vertical</option></select></label>
 </div>
 <div id="chat" class="panel">
-  <div id="tabs"><button data-t="r" class="sel">Sala</button><button data-t="g">Global</button></div>
+  <div id="tabs"><button data-t="r" class="sel">Servidor</button><button data-t="g">Global</button></div>
   <div id="logR" class="log"></div><div id="logG" class="log" style="display:none"></div>
   <div class="row"><input id="cin" maxlength="120" placeholder="Escribí un mensaje…" style="text-transform:none"><button id="csend">Enviar</button></div>
 </div>
@@ -478,55 +484,110 @@ const keepAlive = p => p.on('disconnected', () => setTimeout(() => { try { p.rec
 function startGame() {
   $('lobby').style.display = 'none'; ['hud', 'card'].forEach(i => $(i).style.display = 'block'); $('btns').style.display = 'flex';
   $('cName').textContent = me.name; $('cClass').textContent = CLASSES[me.c];
-  startMusic(); ensureAudio(); updateHud(); initGlobal();
+  startMusic(); ensureAudio(); updateHud(); if (!gStarted) { gStarted = true; initGlobal(); }
   const wl = () => navigator.wakeLock && navigator.wakeLock.request('screen').catch(() => {});
   wl(); document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && wl());
 }
 function updateHud() {
-  $('hud').innerHTML = (roomCode ? `Sala: <b>${roomCode}</b> · ` : 'Solo · ') + `Jugadores: ${remotes.size + 1}<br>${mode === 'phone' ? 'Joystick (izq.) mover · arrastrar (der.) mirar' : 'WASD mover · Shift correr · mouse mirar · Enter chat · V cámara · M música'}`;
+  $('hud').innerHTML = (roomCode ? `Servidor <b>${roomCode.slice(1)}</b> · ` : 'Solo · ') + `Jugadores: ${remotes.size + 1}<br>${mode === 'phone' ? 'Joystick (izq.) mover · arrastrar (der.) mirar' : 'WASD mover · Shift correr · mouse mirar · Enter chat · V cámara · M música'}`;
 }
 
-function createRoom(tries = 0) {
+/* ---------- Servidores fijos (1, 2, 3): el primero que entra lo abre; los demás se unen ---------- */
+const MAXP = 8;
+let netTimer = 0, qPeer = null;
+const srvFins = {};
+function resetNet() {
+  clearInterval(netTimer);
+  for (const c of calls.values()) try { c.close(); } catch (e) {}
+  calls.clear(); audios.forEach(a => { a.srcObject = null; }); audios.clear();
+  if (peer) try { peer.destroy(); } catch (e) {}
+  peer = null; hostConn = null; conns.length = 0; states.clear(); myId = '';
+  for (const r of remotes.values()) scene.remove(r.avatar);
+  remotes.clear();
+}
+function toLobby(msg) {
+  resetNet(); roomCode = '';
+  $('lobby').style.display = 'flex'; ['hud', 'card', 'btns'].forEach(i => $(i).style.display = 'none');
+  say(msg); queryServers();
+}
+function enterServer(n, tries = 0) {
   if (!window.Peer) return say('No se pudo cargar PeerJS (¿sin internet?). Probá "Jugar solo".');
-  roomCode = rndCode();
-  peer = new Peer('bgame-' + roomCode, ICE); keepAlive(peer); onCall(peer);
-  peer.on('open', id => {
+  say('Conectando al servidor ' + n + '…');
+  if (qPeer) { try { qPeer.destroy(); } catch (e) {} qPeer = null; }
+  resetNet(); roomCode = 'S' + n;
+  const p = peer = new Peer('bgame-' + roomCode, ICE); keepAlive(p); onCall(p);
+  p.on('open', id => {
     myId = id; startGame();
-    setInterval(() => { // el host reenvía el estado de todos
+    netTimer = setInterval(() => { // el host reenvía el estado de todos
       const all = Object.fromEntries(states); all.host = snap();
       for (const c of conns) if (c.open) c.send({ t: 'all', p: all });
       const mine = { ...all }; delete mine.host; applyAll(mine, 'host');
     }, 66);
   });
-  peer.on('error', e => {
-    if (e.type === 'unavailable-id' && tries < 5) { peer.destroy(); createRoom(tries + 1); }
+  p.on('error', e => {
+    if (p !== peer) return;
+    if (e.type === 'unavailable-id') { try { p.destroy(); } catch (x) {} joinRoom(roomCode, n, tries); }
     else say('Error de red: ' + e.type);
   });
-  peer.on('connection', c => {
-    conns.push(c);
-    c.on('data', d => { if (d.t === 's') states.set(c.peer, d.s); else if (d.t === 'chat') relayChat(c.peer, d.m); });
+  p.on('connection', c => {
+    c.on('data', d => {
+      if (d.t === 'info') c.send({ t: 'info', n: conns.length + 1 });
+      else if (d.t === 's') {
+        if (!c._in) { if (conns.length + 1 >= MAXP) { c.send({ t: 'full' }); setTimeout(() => c.close(), 400); return; } c._in = true; conns.push(c); }
+        states.set(c.peer, d.s);
+      } else if (d.t === 'chat') relayChat(c.peer, d.m);
+    });
     c.on('close', () => { states.delete(c.peer); const i = conns.indexOf(c); if (i >= 0) conns.splice(i, 1); });
   });
 }
 
-function joinRoom(code) {
-  if (!window.Peer) return say('No se pudo cargar PeerJS (¿sin internet?).');
-  if (code.length !== 4) return say('El código tiene 4 letras.');
-  roomCode = code; let ok = false;
+function joinRoom(code, n, tries) {
+  let ok = false;
   const fail = t => { if (!ok) say(t); };
-  setTimeout(() => fail('No se pudo conectar. Revisá el código, que el anfitrión tenga el juego abierto en pantalla, y probá con Wi‑Fi.'), 20000);
-  peer = new Peer(ICE); keepAlive(peer); onCall(peer);
-  peer.on('error', e => fail(e.type === 'peer-unavailable' ? 'Sala no encontrada (revisá el código).' : 'Error de red: ' + e.type));
-  peer.on('open', id => {
-    myId = id; hostConn = peer.connect('bgame-' + code, { reliable: true });
-    hostConn.on('open', () => { ok = true; startGame(); setInterval(() => hostConn.open && hostConn.send({ t: 's', s: snap() }), 66); });
+  setTimeout(() => fail('No se pudo conectar al servidor. Probá con Wi‑Fi o elegí otro servidor.'), 20000);
+  const p = peer = new Peer(ICE); keepAlive(p); onCall(p);
+  p.on('error', e => {
+    if (p !== peer) return;
+    if (e.type === 'peer-unavailable' && !ok && tries < 3) { setTimeout(() => enterServer(n, tries + 1), 400 + Math.random() * 800); return; } // el servidor se cerró: lo abrimos nosotros
+    fail(e.type === 'peer-unavailable' ? 'Servidor no disponible, reintentá.' : 'Error de red: ' + e.type);
+  });
+  p.on('open', id => {
+    myId = id; hostConn = p.connect('bgame-' + code, { reliable: true });
+    hostConn.on('open', () => { ok = true; startGame(); netTimer = setInterval(() => hostConn && hostConn.open && hostConn.send({ t: 's', s: snap() }), 66); });
     hostConn.on('data', d => {
       if (d.t === 'all') applyAll(d.p, id);
       else if (d.t === 'chat') { showChat('r', d.n, d.m); showBubble((remotes.get(d.k) || {}).avatar, d.m); }
+      else if (d.t === 'full') toLobby('Ese servidor está lleno. Elegí otro.');
     });
-    hostConn.on('close', () => { $('hud').textContent = 'Desconectado: el host salió. Recargá la página.'; });
+    hostConn.on('close', () => { // si el host se va, el siguiente jugador abre el servidor
+      if (!ok || p !== peer) return;
+      $('hud').textContent = 'Servidor caído… reconectando';
+      setTimeout(() => p === peer && enterServer(n), 300 + Math.random() * 2000);
+    });
   });
 }
+
+/* ---------- Lista de servidores (cuántas personas hay en cada uno) ---------- */
+function setSrv(n, txt, full) { const b = document.querySelector(`.srv[data-s="${n}"]`); b.querySelector('span').textContent = txt; b.classList.toggle('full', !!full); }
+function queryServers() {
+  if (!window.Peer) return;
+  if (qPeer) { try { qPeer.destroy(); } catch (e) {} }
+  const q = qPeer = new Peer(ICE);
+  [1, 2, 3].forEach(n => setSrv(n, '…', false));
+  q.on('open', () => [1, 2, 3].forEach(n => {
+    const c = q.connect('bgame-S' + n); let done = false;
+    const fin = (txt, full) => { if (done) return; done = true; setSrv(n, txt, full); try { c.close(); } catch (e) {} };
+    srvFins[n] = fin;
+    c.on('open', () => c.send({ t: 'info' }));
+    c.on('data', d => { if (d.t === 'info') fin(d.n + '/' + MAXP + ' jugadores', d.n >= MAXP); });
+    setTimeout(() => fin('Vacío · 0/' + MAXP, false), 7000);
+  }));
+  q.on('error', e => { const m = /bgame-S(\d)/.exec(e.message || ''); if (m && srvFins[m[1]]) srvFins[m[1]]('Vacío · 0/' + MAXP, false); });
+}
+document.querySelectorAll('.srv').forEach(b => b.onclick = () => { if (b.classList.contains('full')) return; me.name = myName(); enterServer(+b.dataset.s); });
+$('refresh').onclick = queryServers;
+setInterval(() => { if ($('lobby').style.display !== 'none' && !peer) queryServers(); }, 12000);
+queryServers();
 
 /* ---------- Chat de sala (globos) y chat global ---------- */
 let curTab = 'r';
@@ -550,7 +611,7 @@ function sendRoom(m) {
   else if (peer && roomCode) relayChat('host', m);
 }
 // Chat global: el primer jugador abre un "hub" con un ID fijo y los demás se conectan a él (sirve entre todas las salas)
-let gPeer = null, gHub = false, gConns = [], gConn = null, gTimer = 0;
+let gStarted = false, gPeer = null, gHub = false, gConns = [], gConn = null, gTimer = 0;
 const gRetry = ms => { clearTimeout(gTimer); gTimer = setTimeout(initGlobal, ms + Math.random() * 3000); };
 function gBroadcast(d) { for (const c of gConns) if (c.open) c.send(d); showChat('g', d.n, d.m); }
 function initGlobal() {
@@ -643,8 +704,6 @@ $('sOrient').onchange = async e => {
 const setMode = m => { mode = m; document.querySelectorAll('#modes button').forEach(b => b.classList.toggle('sel', b.dataset.m === m)); };
 document.querySelectorAll('#modes button').forEach(b => b.onclick = () => setMode(b.dataset.m));
 setMode(mode);
-$('create').onclick = () => { me.name = myName(); say('Creando sala…'); createRoom(); };
-$('join').onclick = () => { me.name = myName(); say('Conectando…'); joinRoom($('code').value.trim().toUpperCase()); };
 $('solo').onclick = () => { me.name = myName(); startGame(); };
 
 /* ---------- Control y cámara ---------- */
