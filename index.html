@@ -11,13 +11,17 @@
   input,button,select{font:inherit;padding:10px;border-radius:8px;border:1px solid #3d5a3d;background:#263626;color:#fff;min-width:0}
   button{background:#4f8a3a;border:0;cursor:pointer;font-weight:600}
   button.alt{background:#35503a}
-  #lobby{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(15,25,15,.65);z-index:8;overflow:auto}
-  .card{background:#1d2a1d;border:1px solid #3d5a3d;border-radius:14px;padding:22px;width:min(340px,90vw);display:flex;flex-direction:column;gap:10px;margin:auto}
-  .card h1{margin:0 0 4px;font-size:22px}
+  #lobby{position:fixed;inset:0;display:flex;align-items:flex-end;justify-content:center;background:linear-gradient(to top,rgba(8,16,8,.8),rgba(8,16,8,.1) 70%);z-index:8}
+  #title{position:absolute;top:14px;left:0;right:0;text-align:center;font-size:27px;font-weight:800;letter-spacing:.5px;text-shadow:0 2px 10px #000,0 0 22px #4f8a3a}
+  #title small{display:block;font-size:13px;font-weight:500;opacity:.9;letter-spacing:2px}
+  .card{background:rgba(18,28,18,.84);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border:1px solid #4f7a4f;border-radius:16px;padding:14px;width:min(380px,94vw);max-height:62vh;overflow:auto;display:flex;flex-direction:column;gap:8px;margin:0 0 10px;box-shadow:0 8px 30px rgba(0,0,0,.5)}
+  .lbl{font-size:12px;letter-spacing:1px;text-transform:uppercase;opacity:.75;margin-top:2px}
+  #cdesc{font-size:13px;opacity:.9;min-height:2.4em}
   .chars{display:flex;gap:6px}.chars button{flex:1;font-size:13px;padding:9px 4px;background:#35503a}.chars button.sel{background:#4f8a3a;outline:2px solid #ffd77a}
-  #servers{display:flex;flex-direction:column;gap:6px}.srv{display:flex;justify-content:space-between;align-items:center;background:#35503a;padding:12px}.srv span{font-size:12px;font-weight:400;opacity:.85}.srv.full{opacity:.45}
   .row{display:flex;gap:8px}.row input{flex:1;text-transform:uppercase}
+  #servers{display:flex;flex-direction:column;gap:6px}.srv{display:flex;justify-content:space-between;align-items:center;background:#35503a;padding:11px 12px}.srv span{font-size:12px;font-weight:500;opacity:.9}.srv.full{opacity:.45}
   #msg{min-height:1.2em;font-size:13px;color:#ffd77a}
+  @media (orientation:landscape){#lobby{align-items:center;justify-content:flex-end;background:linear-gradient(to left,rgba(8,16,8,.8),rgba(8,16,8,.05) 70%)}.card{max-height:92vh;margin:0 14px 0 0}#title{text-align:left;left:20px;right:auto}}
   #card{position:fixed;top:10px;left:10px;width:150px;background:rgba(0,0,0,.5);padding:8px 10px;border-radius:10px;font-size:13px;display:none;z-index:2}
   #cClass{font-size:11px;opacity:.75}
   .bar{position:relative;height:14px;border-radius:7px;background:rgba(255,255,255,.2);margin-top:5px;overflow:hidden}
@@ -41,26 +45,32 @@
 <script type="importmap">
 {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
 </script>
+<script src="https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js"></script>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 </head>
 <body>
-<div id="lobby"><div class="card">
-  <h1>⚔️ Batalla – Aldea</h1>
-  <input id="name" maxlength="14" placeholder="Tu nombre">
-  <div class="chars" id="modes"><button data-m="phone">📱 Celular</button><button data-m="pc">💻 Computadora</button></div>
-  <div class="chars" id="chars"><button data-c="0" class="sel">Goblin</button><button data-c="1">Gnomo</button><button data-c="2">Domador</button></div>
-  <b style="font-size:14px">Servidores</b>
-  <div id="servers">
-    <button class="srv" data-s="1">Servidor 1<span>…</span></button>
-    <button class="srv" data-s="2">Servidor 2<span>…</span></button>
-    <button class="srv" data-s="3">Servidor 3<span>…</span></button>
+<div id="lobby">
+  <div id="title">⚔️ Batalla Mágica ⚔️<small>RPG · ONLINE</small></div>
+  <div class="card">
+    <input id="name" maxlength="14" placeholder="✏️ Tu nombre">
+    <div class="lbl">🎮 Dispositivo</div>
+    <div class="chars" id="modes"><button data-m="phone">📱 Celular</button><button data-m="pc">💻 Computadora</button></div>
+    <div class="lbl">🧙 Tu personaje</div>
+    <div class="chars" id="chars"><button data-c="0" class="sel">🧪 Goblin</button><button data-c="1">🔮 Gnomo</button><button data-c="2">🐉 Domador</button></div>
+    <div id="cdesc"></div>
+    <div class="lbl">🌍 Servidores</div>
+    <div id="servers">
+      <button class="srv" data-s="1">🏰 Servidor 1<span>…</span></button>
+      <button class="srv" data-s="2">🌲 Servidor 2<span>…</span></button>
+      <button class="srv" data-s="3">🔥 Servidor 3<span>…</span></button>
+    </div>
+    <button class="alt" id="refresh">↻ Actualizar</button>
+    <button class="alt" id="solo">🗡️ Jugar solo</button>
+    <div id="msg">Cargando mapa…</div>
   </div>
-  <button class="alt" id="refresh">↻ Actualizar</button>
-  <button class="alt" id="solo">Jugar solo</button>
-  <div id="msg">Cargando mapa…</div>
-</div></div>
+</div>
 
-<div id="card"><b id="cName"></b><br><span id="cClass"></span>
+<div id="card"><b id="cName"></b><br><span id="cClass"></span><br><span id="wx" style="font-size:11px"></span>
   <div class="bar"><i id="hpBar"></i><span id="hpTxt"></span></div>
   <div class="bar en"><i id="enBar"></i><span id="enTxt"></span></div></div>
 <div id="hud"></div>
@@ -104,7 +114,8 @@ scene.background = new THREE.Color(0x9fd3f0);
 scene.fog = new THREE.Fog(0x9fd3f0, 70, 200);
 const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 400);
 camera.rotation.order = 'YXZ';
-scene.add(new THREE.HemisphereLight(0xffffff, 0x4a6b3a, 1.1));
+const hemi = new THREE.HemisphereLight(0xffffff, 0x4a6b3a, 1.1);
+scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xfff2d0, 2.2);
 sun.position.set(40, 60, 20);
 sun.castShadow = true;
@@ -452,144 +463,117 @@ const remotes = new Map();
 const myName = () => ($('name').value.trim() || 'Jugador').slice(0, 14);
 document.querySelectorAll('#chars button').forEach(b => b.onclick = () => {
   me.c = +b.dataset.c; document.querySelectorAll('#chars button').forEach(x => x.classList.toggle('sel', x === b));
-  loadChar(me.c);
+  loadChar(me.c); showPreview();
 });
 loadChar(0);
 
-function applyAll(p, selfKey) {
-  const ids = [];
-  for (const k in p) {
-    if (k === selfKey) continue;
-    ids.push(k === 'host' ? 'bgame-' + roomCode : k);
-    const s = p[k]; let r = remotes.get(k);
-    if (!r) { r = { avatar: makeAvatar(s.n, s.c), tx: s.x, tz: s.z, tr: s.r }; r.avatar.position.set(s.x, 0, s.z); remotes.set(k, r); }
-    r.tx = s.x; r.tz = s.z; r.tr = s.r; r.avatar.userData.mic.visible = !!s.m;
-  }
-  for (const [k, r] of remotes) if (!(k in p) || k === selfKey) { scene.remove(r.avatar); remotes.delete(k); }
-  syncVoice(ids); updateHud();
+/* ---------- Red en tiempo real: broker MQTT público por WebSocket ----------
+   Todos se conectan a un servidor de internet (no entre sí), así no importa el wifi/datos ni los bloqueos de red. */
+const BROKERS = ['wss://broker.hivemq.com:8884/mqtt', 'wss://broker.emqx.io:8084/mqtt', 'wss://test.mosquitto.org:8081'];
+const MAXP = 8, NS = 'bgame-v1/';
+const ICE = { config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun.cloudflare.com:3478' }, { urls: 'stun:global.stun.twilio.com:3478' }] } }; // solo para la voz
+let brokerIdx = 0, mq = null, lobbyMq = null, srv = 0, peer = null, myId = '', netTimer = 0, tickN = 0, lastSent = '', lastT = 0, preview = null;
+const rid = 'p' + Math.random().toString(36).slice(2, 10);
+const pres = { 1: new Set(), 2: new Set(), 3: new Set() };
+const dec = new TextDecoder();
+const snap = () => ({ x: +me.x.toFixed(2), z: +me.z.toFixed(2), r: +me.ry.toFixed(2), n: me.name, c: me.c, m: me.talking ? 1 : 0 });
+const keepAlive = p => p.on('disconnected', () => setTimeout(() => { try { p.reconnect(); } catch (e) {} }, 1000));
+
+function mqConnect(opts, onConnect, attempt = 0) { // si un broker no responde, prueba el siguiente
+  if (!window.mqtt) { say('No se pudo cargar la conexión de red (¿sin internet?). Probá "Jugar solo".'); return; }
+  const c = mqtt.connect(BROKERS[brokerIdx], { clientId: 'bg-' + Math.random().toString(36).slice(2, 12), keepalive: 30, reconnectPeriod: 2500, connectTimeout: 7000, clean: true, ...opts });
+  let ok = false, moved = false;
+  const next = () => {
+    if (ok || moved) return; moved = true; try { c.end(true); } catch (e) {}
+    if (attempt < 5) { brokerIdx = (brokerIdx + 1) % BROKERS.length; setTimeout(() => mqConnect(opts, onConnect, attempt + 1), 300); }
+    else say('No se pudo conectar con el servidor de juego. Revisá tu internet y probá de nuevo.');
+  };
+  c.on('connect', () => { if (moved) return; ok = true; onConnect(c); });
+  c.on('error', next); c.on('close', next); setTimeout(next, 8000);
 }
 
-/* ---------- Red (PeerJS: sin servidor propio; con STUN/TURN para que conecte entre redes) ---------- */
-const OR = { username: 'openrelayproject', credential: 'openrelayproject' };
-const ICE = { config: { iceServers: [
-  { urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:global.stun.twilio.com:3478' },
-  { urls: 'turn:openrelay.metered.ca:80', ...OR }, { urls: 'turn:openrelay.metered.ca:443', ...OR },
-  { urls: 'turn:openrelay.metered.ca:443?transport=tcp', ...OR }] } };
-let peer = null, roomCode = '', hostConn = null, myId = '';
-const conns = [], states = new Map();
-const snap = () => ({ x: +me.x.toFixed(2), z: +me.z.toFixed(2), r: +me.ry.toFixed(2), n: me.name, c: me.c, m: me.talking ? 1 : 0 });
-const rndCode = () => Array.from({ length: 4 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ'[Math.floor(Math.random() * 24)]).join('');
-const keepAlive = p => p.on('disconnected', () => setTimeout(() => { try { p.reconnect(); } catch (e) {} }, 1000));
+/* Lista de servidores: cuántos jugadores hay en cada uno (presencia en tiempo real) */
+function setSrv(n, txt, full) { const b = document.querySelector(`.srv[data-s="${n}"]`); b.querySelector('span').textContent = txt; b.classList.toggle('full', !!full); }
+function renderCounts() { [1, 2, 3].forEach(n => { const k = pres[n].size; setSrv(n, k ? `👥 ${k}/${MAXP}` : `Vacío 0/${MAXP}`, k >= MAXP); }); }
+function lobbyConnect() {
+  if (lobbyMq) { try { lobbyMq.end(true); } catch (e) {} lobbyMq = null; }
+  [1, 2, 3].forEach(n => { pres[n].clear(); setSrv(n, '…', false); });
+  mqConnect({}, c => {
+    lobbyMq = c;
+    if (!c._h) {
+      c._h = true;
+      c.on('message', (t, b) => { const m = /^bgame-v1\/S(\d)\/p\/(.+)$/.exec(t); if (!m || !pres[m[1]]) return; if (b.length) pres[m[1]].add(m[2]); else pres[m[1]].delete(m[2]); renderCounts(); });
+    }
+    c.subscribe(NS + '+/p/+'); renderCounts();
+  });
+}
+
+/* Entrar a un servidor */
+function enterServer(n) {
+  if (pres[n].size >= MAXP) return say('Ese servidor está lleno. Elegí otro.');
+  say('Conectando al servidor ' + n + '…');
+  if (lobbyMq) { try { lobbyMq.end(true); } catch (e) {} lobbyMq = null; }
+  connectGame(n);
+}
+function connectGame(n) {
+  srv = n; let started = false;
+  mqConnect(n ? { will: { topic: `${NS}S${n}/p/${rid}`, payload: '', retain: true, qos: 0 } } : {}, c => {
+    mq = c;
+    if (!c._h) { c._h = true; c.on('message', onMsg); }
+    c.subscribe(NS + 'global');
+    if (n) { c.subscribe(`${NS}S${n}/#`); c.publish(`${NS}S${n}/p/${rid}`, JSON.stringify({ n: me.name }), { retain: true }); }
+    if (!started) { started = true; if (n) startGame(); }
+  });
+}
+function removeRemote(id) { const r = remotes.get(id); if (r) { scene.remove(r.avatar); remotes.delete(id); updateHud(); } }
+function upsertRemote(id, s) {
+  let r = remotes.get(id);
+  if (!r) {
+    if (remotes.size >= MAXP - 1) return;
+    r = { avatar: makeAvatar(String(s.n || 'Jugador').slice(0, 14), s.c | 0), tx: s.x, tz: s.z, tr: 0 };
+    r.avatar.position.set(s.x, 0, s.z); remotes.set(id, r); updateHud();
+  }
+  r.tx = s.x; r.tz = s.z; r.tr = +s.r || 0; r.seen = Date.now(); r.avatar.userData.mic.visible = !!s.m;
+}
+function onMsg(topic, buf) {
+  let d; try { d = JSON.parse(dec.decode(buf) || 'null'); } catch (e) { return; }
+  if (topic === NS + 'global') { if (d) showChat('g', String(d.n).slice(0, 14), String(d.m).slice(0, 120)); return; }
+  const pre = `${NS}S${srv}/`; if (!srv || !topic.startsWith(pre)) return;
+  const sub = topic.slice(pre.length);
+  if (sub.startsWith('state/')) { const id = sub.slice(6); if (id !== rid && d && isFinite(d.x) && isFinite(d.z)) upsertRemote(id, d); }
+  else if (sub.startsWith('p/')) { if (!d) removeRemote(sub.slice(2)); }
+  else if (sub === 'chat' && d && d.id !== rid) { const m = String(d.m).slice(0, 120); showChat('r', String(d.n).slice(0, 14), m); showBubble((remotes.get(d.id) || {}).avatar, m); }
+}
+function netTick() { // 10 veces por segundo: manda tu posición (y un latido cada segundo)
+  const now = Date.now();
+  if (srv && mq && mq.connected) {
+    const s = JSON.stringify(snap());
+    if (s !== lastSent || now - lastT > 1000) { lastSent = s; lastT = now; mq.publish(`${NS}S${srv}/state/${rid}`, s); }
+  }
+  if (++tickN % 10 === 0) {
+    for (const [id, r] of remotes) if (now - r.seen > 5000) removeRemote(id);
+    syncVoice([...remotes.keys()].map(k => 'bgv-' + k));
+  }
+}
 
 function startGame() {
   $('lobby').style.display = 'none'; ['hud', 'card'].forEach(i => $(i).style.display = 'block'); $('btns').style.display = 'flex';
+  if (preview) { scene.remove(preview); preview = null; }
   $('cName').textContent = me.name; $('cClass').textContent = CLASSES[me.c];
-  startMusic(); ensureAudio(); updateHud(); if (!gStarted) { gStarted = true; initGlobal(); }
+  startMusic(); ensureAudio(); updateHud();
+  clearInterval(netTimer); netTimer = setInterval(netTick, 100);
+  if (srv && window.Peer && !peer) { // la voz usa llamadas directas (WebRTC) y mejor esfuerzo
+    peer = new Peer('bgv-' + rid, ICE); keepAlive(peer); onCall(peer);
+    peer.on('open', id => { myId = id; }); peer.on('error', () => {});
+  }
   const wl = () => navigator.wakeLock && navigator.wakeLock.request('screen').catch(() => {});
   wl(); document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && wl());
 }
 function updateHud() {
-  $('hud').innerHTML = (roomCode ? `Servidor <b>${roomCode.slice(1)}</b> · ` : 'Solo · ') + `Jugadores: ${remotes.size + 1}<br>${mode === 'phone' ? 'Joystick (izq.) mover · arrastrar (der.) mirar' : 'WASD mover · Shift correr · mouse mirar · Enter chat · V cámara · M música'}`;
+  $('hud').innerHTML = (srv ? `Servidor <b>${srv}</b> · ` : 'Solo · ') + `Jugadores: ${remotes.size + 1}<br>${mode === 'phone' ? 'Joystick (izq.) mover · arrastrar (der.) mirar' : 'WASD mover · Shift correr · mouse mirar · Enter chat · V cámara · M música'}`;
 }
 
-/* ---------- Servidores fijos (1, 2, 3): el primero que entra lo abre; los demás se unen ---------- */
-const MAXP = 8;
-let netTimer = 0, qPeer = null;
-const srvFins = {};
-function resetNet() {
-  clearInterval(netTimer);
-  for (const c of calls.values()) try { c.close(); } catch (e) {}
-  calls.clear(); audios.forEach(a => { a.srcObject = null; }); audios.clear();
-  if (peer) try { peer.destroy(); } catch (e) {}
-  peer = null; hostConn = null; conns.length = 0; states.clear(); myId = '';
-  for (const r of remotes.values()) scene.remove(r.avatar);
-  remotes.clear();
-}
-function toLobby(msg) {
-  resetNet(); roomCode = '';
-  $('lobby').style.display = 'flex'; ['hud', 'card', 'btns'].forEach(i => $(i).style.display = 'none');
-  say(msg); queryServers();
-}
-function enterServer(n, tries = 0) {
-  if (!window.Peer) return say('No se pudo cargar PeerJS (¿sin internet?). Probá "Jugar solo".');
-  say('Conectando al servidor ' + n + '…');
-  if (qPeer) { try { qPeer.destroy(); } catch (e) {} qPeer = null; }
-  resetNet(); roomCode = 'S' + n;
-  const p = peer = new Peer('bgame-' + roomCode, ICE); keepAlive(p); onCall(p);
-  p.on('open', id => {
-    myId = id; startGame();
-    netTimer = setInterval(() => { // el host reenvía el estado de todos
-      const all = Object.fromEntries(states); all.host = snap();
-      for (const c of conns) if (c.open) c.send({ t: 'all', p: all });
-      const mine = { ...all }; delete mine.host; applyAll(mine, 'host');
-    }, 66);
-  });
-  p.on('error', e => {
-    if (p !== peer) return;
-    if (e.type === 'unavailable-id') { try { p.destroy(); } catch (x) {} joinRoom(roomCode, n, tries); }
-    else say('Error de red: ' + e.type);
-  });
-  p.on('connection', c => {
-    c.on('data', d => {
-      if (d.t === 'info') c.send({ t: 'info', n: conns.length + 1 });
-      else if (d.t === 's') {
-        if (!c._in) { if (conns.length + 1 >= MAXP) { c.send({ t: 'full' }); setTimeout(() => c.close(), 400); return; } c._in = true; conns.push(c); }
-        states.set(c.peer, d.s);
-      } else if (d.t === 'chat') relayChat(c.peer, d.m);
-    });
-    c.on('close', () => { states.delete(c.peer); const i = conns.indexOf(c); if (i >= 0) conns.splice(i, 1); });
-  });
-}
-
-function joinRoom(code, n, tries) {
-  let ok = false;
-  const fail = t => { if (!ok) say(t); };
-  setTimeout(() => fail('No se pudo conectar al servidor. Probá con Wi‑Fi o elegí otro servidor.'), 20000);
-  const p = peer = new Peer(ICE); keepAlive(p); onCall(p);
-  p.on('error', e => {
-    if (p !== peer) return;
-    if (e.type === 'peer-unavailable' && !ok && tries < 3) { setTimeout(() => enterServer(n, tries + 1), 400 + Math.random() * 800); return; } // el servidor se cerró: lo abrimos nosotros
-    fail(e.type === 'peer-unavailable' ? 'Servidor no disponible, reintentá.' : 'Error de red: ' + e.type);
-  });
-  p.on('open', id => {
-    myId = id; hostConn = p.connect('bgame-' + code, { reliable: true });
-    hostConn.on('open', () => { ok = true; startGame(); netTimer = setInterval(() => hostConn && hostConn.open && hostConn.send({ t: 's', s: snap() }), 66); });
-    hostConn.on('data', d => {
-      if (d.t === 'all') applyAll(d.p, id);
-      else if (d.t === 'chat') { showChat('r', d.n, d.m); showBubble((remotes.get(d.k) || {}).avatar, d.m); }
-      else if (d.t === 'full') toLobby('Ese servidor está lleno. Elegí otro.');
-    });
-    hostConn.on('close', () => { // si el host se va, el siguiente jugador abre el servidor
-      if (!ok || p !== peer) return;
-      $('hud').textContent = 'Servidor caído… reconectando';
-      setTimeout(() => p === peer && enterServer(n), 300 + Math.random() * 2000);
-    });
-  });
-}
-
-/* ---------- Lista de servidores (cuántas personas hay en cada uno) ---------- */
-function setSrv(n, txt, full) { const b = document.querySelector(`.srv[data-s="${n}"]`); b.querySelector('span').textContent = txt; b.classList.toggle('full', !!full); }
-function queryServers() {
-  if (!window.Peer) return;
-  if (qPeer) { try { qPeer.destroy(); } catch (e) {} }
-  const q = qPeer = new Peer(ICE);
-  [1, 2, 3].forEach(n => setSrv(n, '…', false));
-  q.on('open', () => [1, 2, 3].forEach(n => {
-    const c = q.connect('bgame-S' + n); let done = false;
-    const fin = (txt, full) => { if (done) return; done = true; setSrv(n, txt, full); try { c.close(); } catch (e) {} };
-    srvFins[n] = fin;
-    c.on('open', () => c.send({ t: 'info' }));
-    c.on('data', d => { if (d.t === 'info') fin(d.n + '/' + MAXP + ' jugadores', d.n >= MAXP); });
-    setTimeout(() => fin('Vacío · 0/' + MAXP, false), 7000);
-  }));
-  q.on('error', e => { const m = /bgame-S(\d)/.exec(e.message || ''); if (m && srvFins[m[1]]) srvFins[m[1]]('Vacío · 0/' + MAXP, false); });
-}
-document.querySelectorAll('.srv').forEach(b => b.onclick = () => { if (b.classList.contains('full')) return; me.name = myName(); enterServer(+b.dataset.s); });
-$('refresh').onclick = queryServers;
-setInterval(() => { if ($('lobby').style.display !== 'none' && !peer) queryServers(); }, 12000);
-queryServers();
-
-/* ---------- Chat de sala (globos) y chat global ---------- */
+/* ---------- Chat (servidor con globos + global) ---------- */
 let curTab = 'r';
 const logs = { r: $('logR'), g: $('logG') };
 function showChat(ch, name, text) {
@@ -599,44 +583,13 @@ function showChat(ch, name, text) {
   box.appendChild(d); while (box.childElementCount > 40) box.firstChild.remove(); box.scrollTop = box.scrollHeight;
   if (ch !== 'sys' && !$('chat').classList.contains('open')) $('bChat').classList.add('on');
 }
-function relayChat(k, m) {
-  m = String(m).slice(0, 120);
-  const n = k === 'host' ? me.name : ((states.get(k) || {}).n || 'Jugador');
-  for (const c of conns) if (c.open && c.peer !== k) c.send({ t: 'chat', k, n, m });
-  if (k !== 'host') { showChat('r', n, m); showBubble((remotes.get(k) || {}).avatar, m); }
-}
 function sendRoom(m) {
   showChat('r', me.name, m); showBubble(me.avatar, m);
-  if (hostConn && hostConn.open) hostConn.send({ t: 'chat', m });
-  else if (peer && roomCode) relayChat('host', m);
-}
-// Chat global: el primer jugador abre un "hub" con un ID fijo y los demás se conectan a él (sirve entre todas las salas)
-let gStarted = false, gPeer = null, gHub = false, gConns = [], gConn = null, gTimer = 0;
-const gRetry = ms => { clearTimeout(gTimer); gTimer = setTimeout(initGlobal, ms + Math.random() * 3000); };
-function gBroadcast(d) { for (const c of gConns) if (c.open) c.send(d); showChat('g', d.n, d.m); }
-function initGlobal() {
-  if (!window.Peer || gConn || gHub) return;
-  const p = new Peer('bgame-global-hub', ICE);
-  p.on('open', () => {
-    gPeer = p; gHub = true;
-    p.on('connection', c => { gConns.push(c); c.on('data', d => { if (d.t === 'g') gBroadcast({ t: 'g', n: String(d.n).slice(0, 14), m: String(d.m).slice(0, 120) }); }); c.on('close', () => { gConns = gConns.filter(x => x !== c); }); });
-  });
-  p.on('disconnected', () => { try { p.reconnect(); } catch (e) {} });
-  p.on('error', e => { if (e.type === 'unavailable-id') { p.destroy(); joinGlobal(); } else gRetry(5000); });
-}
-function joinGlobal() {
-  const p = new Peer(ICE);
-  p.on('open', () => {
-    const c = p.connect('bgame-global-hub', { reliable: true });
-    c.on('open', () => { gPeer = p; gConn = c; });
-    c.on('data', d => { if (d.t === 'g') showChat('g', d.n, d.m); });
-    c.on('close', () => { gConn = null; p.destroy(); gRetry(1000); });
-  });
-  p.on('error', e => { if (!gConn) { try { p.destroy(); } catch (x) {} gRetry(e.type === 'peer-unavailable' ? 1500 : 5000); } });
+  if (srv && mq && mq.connected) mq.publish(`${NS}S${srv}/chat`, JSON.stringify({ id: rid, n: me.name, m }));
 }
 function sendGlobal(m) {
-  const d = { t: 'g', n: me.name, m };
-  if (gHub) gBroadcast(d); else if (gConn && gConn.open) gConn.send(d); else showChat('sys', '', 'Chat global conectándose… probá de nuevo en unos segundos.');
+  if (mq && mq.connected) mq.publish(NS + 'global', JSON.stringify({ n: me.name, m }));
+  else showChat('sys', '', 'Chat global conectándose… probá en unos segundos.');
 }
 function sendChat() {
   const m = $('cin').value.trim().slice(0, 120); if (!m) return; $('cin').value = '';
@@ -704,7 +657,19 @@ $('sOrient').onchange = async e => {
 const setMode = m => { mode = m; document.querySelectorAll('#modes button').forEach(b => b.classList.toggle('sel', b.dataset.m === m)); };
 document.querySelectorAll('#modes button').forEach(b => b.onclick = () => setMode(b.dataset.m));
 setMode(mode);
-$('solo').onclick = () => { me.name = myName(); startGame(); };
+document.querySelectorAll('.srv').forEach(b => b.onclick = () => { if (b.classList.contains('full')) return; me.name = myName(); enterServer(+b.dataset.s); });
+$('refresh').onclick = lobbyConnect;
+$('solo').onclick = () => { me.name = myName(); startGame(); connectGame(0); };
+lobbyConnect();
+
+/* ---------- Menú: personaje 3D de vista previa ---------- */
+const DESC = ['🧪 Goblin mago · astuto y veloz, con su bastón de madera viva.', '🔮 Gnomo mago · pequeño, ágil y lleno de trucos arcanos.', '🐉 Domador de dragones · alto y resistente, criador de bestias.'];
+function showPreview() {
+  if (preview) scene.remove(preview);
+  preview = makeAvatar(CLASSES[me.c], me.c, false); preview.position.set(0, 0, 14);
+  $('cdesc').textContent = DESC[me.c];
+}
+showPreview();
 
 /* ---------- Control y cámara ---------- */
 const keys = {};
@@ -750,6 +715,97 @@ const endPtr = e => {
 cv.addEventListener('pointerup', endPtr); cv.addEventListener('pointercancel', endPtr);
 addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
 
+/* ---------- Clima y nubes (el clima cambia solo y es igual para todos los jugadores) ---------- */
+const WX = {
+  sol:      { n: '☀️ Soleado',  sky: 0x9fd3f0, hemi: 1.1,  sun: 2.2,  near: 70, far: 200, cloud: 0.45, dark: 1.0,  rain: 0 },
+  nublado:  { n: '☁️ Nublado',  sky: 0xb7c3cc, hemi: 0.95, sun: 1.0,  near: 60, far: 190, cloud: 1,    dark: 0.85, rain: 0 },
+  lluvia:   { n: '🌧️ Lluvia',   sky: 0x8d9aa6, hemi: 0.8,  sun: 0.45, near: 40, far: 140, cloud: 1,    dark: 0.62, rain: 0.55 },
+  tormenta: { n: '⛈️ Tormenta', sky: 0x5d6873, hemi: 0.6,  sun: 0.2,  near: 28, far: 110, cloud: 1,    dark: 0.38, rain: 1 },
+  niebla:   { n: '🌫️ Niebla',   sky: 0xcdd4d8, hemi: 0.9,  sun: 0.55, near: 4,  far: 55,  cloud: 0.5,  dark: 0.9,  rain: 0 },
+};
+const WX_KEYS = Object.keys(WX), WX_W = [0.3, 0.25, 0.2, 0.1, 0.15];
+function wxNow() { // cada 45 s toca un clima, elegido igual para todos con el reloj
+  const r = mulberry32((Math.floor(Date.now() / 45000) * 2654435761) >>> 0)();
+  let a = 0; for (let i = 0; i < 5; i++) { a += WX_W[i]; if (r < a) return WX_KEYS[i]; }
+  return 'sol';
+}
+const cur = { sky: new THREE.Color(), hemi: 1, sun: 1, near: 70, far: 200, cloud: 1, dark: 1, rain: 0 };
+{ const T = WX[wxNow()]; cur.sky.set(T.sky); for (const f of ['hemi', 'sun', 'near', 'far', 'cloud', 'dark', 'rain']) cur[f] = T[f]; }
+
+function cloudTex(seed) { // nube esponjosa con sombra suave abajo
+  const c = document.createElement('canvas'); c.width = 256; c.height = 128;
+  const g = c.getContext('2d'), r = mulberry32(seed);
+  for (let i = 0; i < 26; i++) {
+    const x = 40 + r() * 176, y = 52 + r() * 28 - Math.abs(x - 128) * 0.12, rad = 20 + r() * 28;
+    const gr = g.createRadialGradient(x, y, 0, x, y, rad);
+    gr.addColorStop(0, 'rgba(255,255,255,.55)'); gr.addColorStop(0.6, 'rgba(255,255,255,.22)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = gr; g.fillRect(x - rad, y - rad, rad * 2, rad * 2);
+  }
+  g.globalCompositeOperation = 'source-atop';
+  const sh = g.createLinearGradient(0, 40, 0, 100); sh.addColorStop(0, 'rgba(255,255,255,0)'); sh.addColorStop(1, 'rgba(140,155,175,.55)');
+  g.fillStyle = sh; g.fillRect(0, 0, 256, 128);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+const cloudTexs = [11, 22, 33].map(cloudTex), clouds = [], rc = mulberry32(77);
+for (let i = 0; i < 26; i++) {
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: cloudTexs[i % 3], transparent: true, depthWrite: false, fog: false }));
+  const a = rc() * 6.283, d = 30 + rc() * 190, w = 60 + rc() * 70;
+  s.position.set(Math.cos(a) * d, 62 + rc() * 40, Math.sin(a) * d); s.scale.set(w, w * 0.5, 1);
+  clouds.push(s); scene.add(s);
+}
+
+const RAIN_N = TOUCH ? 900 : 1600;
+const rainU = { uCam: { value: new THREE.Vector3() }, uTime: { value: 0 }, uAmt: { value: 0 } };
+const rain = (() => {
+  const pos = new Float32Array(RAIN_N * 6), seed = new Float32Array(RAIN_N * 8), tip = new Float32Array(RAIN_N * 2);
+  for (let i = 0; i < RAIN_N; i++) {
+    const s = [Math.random(), Math.random(), Math.random(), Math.random()];
+    seed.set(s, i * 8); seed.set(s, i * 8 + 4); tip[i * 2 + 1] = 1;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('seed', new THREE.BufferAttribute(seed, 4));
+  geo.setAttribute('tip', new THREE.BufferAttribute(tip, 1));
+  const m = new THREE.LineSegments(geo, new THREE.ShaderMaterial({
+    uniforms: rainU, transparent: true, depthWrite: false,
+    vertexShader: `attribute vec4 seed; attribute float tip; uniform vec3 uCam; uniform float uTime, uAmt;
+      void main(){ vec3 b = vec3(44., 26., 44.); vec3 p = seed.xyz * b;
+        p.y -= uTime * (20. + seed.w * 8.); p.x += uTime * 2.;
+        p = mod(p - uCam + b * .5, b) + uCam - b * .5; p += tip * vec3(.12, .7, .05) * (.6 + seed.w * .6);
+        gl_Position = projectionMatrix * viewMatrix * vec4(p, 1.);
+        if (seed.w > uAmt) gl_Position = vec4(2., 2., 2., 1.); }`,
+    fragmentShader: 'void main(){ gl_FragColor = vec4(.78, .84, .92, .38); }',
+  }));
+  m.frustumCulled = false; scene.add(m); return m;
+})();
+let wxName = '', flash = 0, lightT = 6, rainGain = null;
+const _c2 = new THREE.Color(), _white = new THREE.Color(0xffffff), _c3 = new THREE.Color();
+function initRainAudio() { // sonido de lluvia generado (ruido filtrado)
+  const len = actx.sampleRate * 2, buf = actx.createBuffer(1, len, actx.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  const src = actx.createBufferSource(), f = actx.createBiquadFilter(); src.buffer = buf; src.loop = true; f.type = 'lowpass'; f.frequency.value = 1800;
+  rainGain = actx.createGain(); rainGain.gain.value = 0; src.connect(f); f.connect(rainGain); rainGain.connect(actx.destination); src.start();
+}
+function updateWeather(dt) {
+  const key = wxNow(), T = WX[key];
+  if (key !== wxName) { wxName = key; $('wx').textContent = T.n; }
+  const k = 1 - Math.exp(-dt * 0.35);
+  cur.sky.lerp(_c3.set(T.sky), k);
+  for (const f of ['hemi', 'sun', 'near', 'far', 'cloud', 'dark', 'rain']) cur[f] += (T[f] - cur[f]) * k;
+  if (cur.rain > 0.8) { lightT -= dt; if (lightT <= 0) { flash = 1; lightT = 4 + Math.random() * 9; } }
+  flash = Math.max(0, flash - dt * 3.5);
+  _c2.copy(cur.sky).lerp(_white, flash * 0.6);
+  scene.background.copy(_c2); scene.fog.color.copy(_c2); scene.fog.near = cur.near; scene.fog.far = cur.far;
+  hemi.intensity = cur.hemi + flash * 2.2; sun.intensity = cur.sun;
+  clouds.forEach((s, i) => {
+    s.position.x += dt * (2 + i % 5); if (s.position.x > 230) s.position.x = -230;
+    s.material.opacity = Math.min(1, Math.max(0, (cur.cloud * clouds.length - i) / 3)) * 0.92; s.material.color.setScalar(cur.dark);
+  });
+  rain.visible = cur.rain > 0.02; rainU.uTime.value += dt; rainU.uAmt.value = cur.rain; rainU.uCam.value.copy(camera.position);
+  if (actx && !rainGain) initRainAudio();
+  if (rainGain) rainGain.gain.value = muted ? 0 : cur.rain * 0.2 * Math.min(1, musicVol * 1.3);
+}
+
 /* ---------- Loop ---------- */
 const clock = new THREE.Clock();
 let lastEn = -1, lastHp = -1;
@@ -792,7 +848,12 @@ renderer.setAnimationLoop(() => {
       camera.lookAt(me.x, ty, me.z);
     }
     u.mic.visible = me.talking && view !== 'fp'; tickBubble(me.avatar, dt, view === 'fp');
-  } else { camera.position.set(0, 30, 60); camera.lookAt(0, 0, -10); }
+  } else { // menú: cámara frente al personaje elegido
+    const t = performance.now() / 1000, a = Math.sin(t * 0.3) * 0.5;
+    if (preview) preview.rotation.y = a * 0.8;
+    camera.position.set(Math.sin(a) * 4.2, 1.5, 14 + Math.cos(a) * 4.2); camera.lookAt(0, 1.0, 14);
+    if (innerWidth > innerHeight) camera.translateX(2.0); else camera.translateY(-1.5);
+  }
 
   for (const r of remotes.values()) {
     const p = r.avatar.position, t = Math.min(1, dt * 10), ox = p.x, oz = p.z;
@@ -810,6 +871,7 @@ renderer.setAnimationLoop(() => {
   talkHold = Math.max(0, talkHold - dt); me.talking = micOn && talkHold > 0;
   const e = Math.round(me.en); if (e !== lastEn) { lastEn = e; $('enBar').style.width = e + '%'; $('enTxt').textContent = 'Energía ' + e; }
   if (me.hp !== lastHp) { lastHp = me.hp; $('hpBar').style.width = me.hp + '%'; $('hpTxt').textContent = 'Vida ' + me.hp; }
+  updateWeather(dt);
   updateMusic(dt);
   renderer.render(scene, camera);
 });
