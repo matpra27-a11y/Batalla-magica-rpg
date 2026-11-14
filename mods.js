@@ -191,10 +191,22 @@
   function perf(G) {
     const { renderer, sun, me, camera, scene, TOUCH } = G;
     camera.far = 230; camera.updateProjectionMatrix();             // la niebla ya tapa lo de más lejos
-    const maxDpr = Math.min(window.devicePixelRatio || 1, TOUCH ? 1.25 : 1.5), minDpr = 0.7;
-    let cur = maxDpr;
+    // Calidad: auto = nítido (hasta resolución nativa, máx 2x) y baja sola SOLO si va lento
+    const cap = Math.min(window.devicePixelRatio || 1, 2);
+    let q = 'auto'; try { q = localStorage.getItem('bm_q') || 'auto'; } catch (e) {}
+    let maxDpr = cap, minDpr = Math.min(1, cap), cur = cap, auto = true;
+    const setQ = v => {
+      q = v; auto = v === 'auto';
+      if (v === 'high') { maxDpr = minDpr = cap; }
+      else if (v === 'mid') { maxDpr = minDpr = Math.min(cap, 1.25); }
+      else if (v === 'low') { maxDpr = minDpr = Math.min(cap, 0.85); }
+      else { maxDpr = cap; minDpr = Math.min(1, cap); }
+      cur = maxDpr; apply();
+      try { localStorage.setItem('bm_q', v); } catch (e) {}
+    };
     const apply = () => { renderer.setPixelRatio(cur); renderer.setSize(innerWidth, innerHeight); };
-    apply();
+    window.__setQ = setQ; window.__getQ = () => q;
+    setQ(q);
     // sombras: siguen al jugador (más nítidas) y se actualizan cada 2 cuadros
     const sc = sun.shadow.camera; sc.left = -48; sc.right = 48; sc.top = 48; sc.bottom = -48; sc.far = 200; sc.updateProjectionMatrix();
     scene.add(sun.target);
@@ -211,7 +223,7 @@
       if (fr % every === 0) renderer.shadowMap.needsUpdate = true;
       if (n >= 60) { // calidad dinámica: baja la resolución interna sólo si va lento
         const avg = acc / n; acc = 0; n = 0;
-        if (performance.now() > cool) {
+        if (auto && performance.now() > cool) {
           if (avg > 26 && cur > minDpr) { cur = Math.max(minDpr, cur - 0.15); every = Math.min(4, every + 1); apply(); cool = performance.now() + 3000; }
           else if (avg < 18.5 && cur < maxDpr) { cur = Math.min(maxDpr, cur + 0.1); every = Math.max(2, every - 1); apply(); cool = performance.now() + 5000; }
         }
@@ -219,8 +231,20 @@
     }
     requestAnimationFrame(tick);
     // objetos instanciados estáticos: no recalcular matrices cada cuadro
-    const freeze = () => scene.traverse(o => { if (o.isInstancedMesh && o.matrixAutoUpdate) { o.updateMatrix(); o.matrixAutoUpdate = false; } });
-    setTimeout(freeze, 8000); setTimeout(freeze, 25000);
+    const aniso = Math.min(8, renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 1);
+    const smooth = o => { // texturas más suaves y nítidas de cerca (sin quitar nada)
+      const m = o.material; if (!m) return;
+      for (const mm of Array.isArray(m) ? m : [m]) {
+        const t = mm && mm.map; if (!t || t._bm) continue; t._bm = 1;
+        if (t.magFilter === G.THREE.NearestFilter) { t.magFilter = G.THREE.LinearFilter; t.needsUpdate = true; }
+        t.anisotropy = Math.max(t.anisotropy || 1, aniso);
+      }
+    };
+    const freeze = () => scene.traverse(o => {
+      if (o.isMesh || o.isInstancedMesh) smooth(o);
+      if (o.isInstancedMesh && o.matrixAutoUpdate) { o.updateMatrix(); o.matrixAutoUpdate = false; }
+    });
+    setTimeout(freeze, 4000); setTimeout(freeze, 12000); setTimeout(freeze, 30000);
   }
 
   window.__MODS = {
@@ -385,6 +409,12 @@
       if (profile.is_admin) { const a = document.createElement('button'); a.textContent = '🛠️'; a.onclick = () => togglePanel('bmAd'); btns.appendChild(a); }
     }
     buildFriends(); if (profile.is_admin) buildAdmin();
+    const st = $('settings');
+    if (st && window.__setQ && !$('bmQ')) {
+      const l = document.createElement('label');
+      l.innerHTML = '🖼️ Calidad <select id="bmQ"><option value="auto">Automática</option><option value="high">Alta (más nítida)</option><option value="mid">Media</option><option value="low">Baja (más fluido)</option></select>';
+      st.appendChild(l); const sel = $('bmQ'); sel.value = window.__getQ(); sel.onchange = () => window.__setQ(sel.value);
+    }
     API.heartbeat(); clearInterval(hbTimer); hbTimer = setInterval(() => API.heartbeat(), 60000);
   }
 
