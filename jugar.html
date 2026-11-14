@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Batalla Mágica</title>
+<style>body{margin:0;height:100vh;display:flex;align-items:center;justify-content:center;background:#0f1a0f;color:#fff;font-family:system-ui,sans-serif;text-align:center;padding:20px;box-sizing:border-box}a{color:#ffd77a}</style>
+</head><body><div id="s">⚔️ Cargando Batalla Mágica…</div>
+<script>
+(async () => {
+  const s = document.getElementById('s');
+  try {
+    const get = (u, req) => fetch(u).then(r => { if (!r.ok) { if (req) throw new Error(u + ' (' + r.status + ')'); return ''; } return r.text(); }).catch(e => { if (req) throw e; return ''; });
+    let [html, mods, cfg] = await Promise.all([get('index.html', 1), get('mods.js', 1), get('config.js', 0)]);
+    const rep = (a, b) => { if (!html.includes(a)) { console.warn('parche no aplicado:', a.slice(0, 50)); return; } html = html.replace(a, () => b); };
+    const inline = (cfg + '\n' + mods).replace(/<\/script/gi, '<\\/script');
+    rep('</head>', '<script>' + inline + '<\/script></head>');
+    // ganchos del mundo / optimización (corren antes de armar el bosque)
+    rep('spawnPortal(); loadPack();',
+      "try{window.__G={THREE,scene,renderer,camera,sun,me,queue,instance,colliders,pathSegs,blocked,mulberry32,TOUCH,PORTAL,remotes};window.__MODS&&window.__MODS.pre(window.__G);}catch(e){console.warn('mods',e)} spawnPortal(); loadPack();");
+    rep('packState = 2; buildForest();', "packState = 2; buildForest(); try{window.__MODS&&window.__MODS.post(window.__G)}catch(e){console.warn('mods',e)}");
+    // límites del mapa más amplios para llegar a la aldea de runas
+    rep('me.x = Math.max(-WORLD, Math.min(WORLD, me.x));', 'me.x = Math.max(-125, Math.min(125, me.x));');
+    document.open(); document.write(html); document.close();
+  } catch (e) {
+    s.innerHTML = '⚠️ No se pudo cargar: ' + String(e.message).replace(/</g, '&lt;') + '<br><br>Revisá que <b>index.html</b>, <b>mods.js</b> y <b>config.js</b> estén subidos en el mismo lugar.<br><a href="index.html">Abrir la versión original</a>';
+  }
+})();
+</script></body></html>
