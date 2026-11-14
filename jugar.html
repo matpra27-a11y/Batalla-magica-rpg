@@ -15,8 +15,12 @@
     rep('</head>', '<script>' + inline + '<\/script></head>');
     // ganchos del mundo / optimización (corren antes de armar el bosque)
     rep('spawnPortal(); loadPack();',
-      "try{window.__G={THREE,scene,renderer,camera,sun,me,queue,instance,colliders,pathSegs,blocked,mulberry32,TOUCH,PORTAL,remotes};window.__MODS&&window.__MODS.pre(window.__G);}catch(e){console.warn('mods',e)} spawnPortal(); loadPack();");
+      "try{window.__G={THREE,scene,renderer,camera,sun,me,queue,instance,colliders,pathSegs,blocked,mulberry32,TOUCH,PORTAL,remotes,circleTex,addRing,addGlow};window.__MODS&&window.__MODS.pre(window.__G);}catch(e){console.warn('mods',e)} spawnPortal(); loadPack();");
     rep('packState = 2; buildForest();', "packState = 2; buildForest(); try{window.__MODS&&window.__MODS.post(window.__G)}catch(e){console.warn('mods',e)}");
+    // el portal vuelve a aparecer 5 minutos después de explotar (y ya no a los 40 s de la victoria)
+    rep('scene.remove(portal.g); portal = null; wave.active = true;',
+      "scene.remove(portal.g); portal = null; clearTimeout(window.__pt); window.__pt = setTimeout(() => { spawnPortal(); try { alertMsg('🌀 ¡El portal reapareció!', 'Volvé al final del camino del sur', 3200); } catch (e) {} }, 300000); wave.active = true;");
+    rep('setTimeout(spawnPortal, 40000);', '/* el portal reaparece cada 5 min */');
     // límites del mapa más amplios para llegar a la aldea de runas
     rep('me.x = Math.max(-WORLD, Math.min(WORLD, me.x));', 'me.x = Math.max(-125, Math.min(125, me.x));');
     document.open(); document.write(html); document.close();

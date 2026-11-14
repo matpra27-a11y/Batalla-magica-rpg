@@ -28,6 +28,36 @@
     };
   }
 
+  function runes(G, sites) {
+    const { THREE, scene, me } = G;
+    const mk = (R, cA, cB) => {
+      const mat = new THREE.MeshBasicMaterial({ map: G.circleTex(cA, cB), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false, opacity: 0 });
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), mat); m.rotation.x = -Math.PI / 2; m.scale.set(R * 2, R * 2, 1); return m;
+    };
+    sites.forEach(s => {
+      s.g1 = new THREE.Group(); s.g2 = new THREE.Group();
+      s.m1 = mk(s.R, s.cA, s.cB); s.m2 = mk(s.R * 0.62, s.cB, s.cA);
+      s.g1.add(s.m1); s.g2.add(s.m2);
+      s.root = new THREE.Group(); s.root.position.set(s.x, 0.1, s.z); s.root.add(s.g1, s.g2); s.root.visible = false; scene.add(s.root);
+      s.a = 0; s.near = false;
+    });
+    let last = performance.now();
+    (function tick(now) {
+      requestAnimationFrame(tick);
+      const dt = Math.min(0.1, (now - last) / 1000); last = now;
+      for (const s of sites) {
+        const near = Math.hypot(me.x - s.x, me.z - s.z) < s.R + 5;
+        if (near && !s.near) { try { G.addRing(s.x, s.z, s.R * 1.15, s.cA, 1.0); G.addGlow(new THREE.Vector3(s.x, 1.2, s.z), s.cB, s.R * 0.9, 1.2); } catch (e) {} }
+        s.near = near;
+        s.a += ((near ? 1 : 0) - s.a) * Math.min(1, dt * (near ? 3.5 : 1.8));
+        if (s.a < 0.01) { s.root.visible = false; continue; }
+        s.root.visible = true; const k = 0.7 + 0.3 * s.a; s.root.scale.set(k, 1, k);
+        s.g1.rotation.y += dt * 0.5; s.g2.rotation.y -= dt * 0.9;
+        s.m1.material.opacity = s.m2.material.opacity = s.a * 0.95;
+      }
+    })(performance.now());
+  }
+
   function worldPre(G) {
     const { THREE, scene, queue, colliders, pathSegs, mulberry32, TOUCH, PORTAL } = G;
     const k = TOUCH ? 0.65 : 1, N = n => Math.max(1, Math.round(n * k));
@@ -107,6 +137,14 @@
     queue('giant-fantasy-mushrooms', [{ x: hx - 34, z: hz + 11, r: 0 }], { w: 10, shadow: true });
 
     queue('p_path', tiles, { raw: true, ox: -0.5, oz: 0.5, nearest: true });
+
+    // círculos mágicos gigantes que se encienden al acercarse a las runas de la aldea
+    runes(G, [
+      { x: hx - 26, z: hz - 14, R: 12, cA: '#b86bff', cB: '#66e0ff' },
+      { x: hs[0].x, z: hs[0].z, R: 8, cA: '#ff9a3c', cB: '#ffe08a' },
+      { x: hs[1].x, z: hs[1].z, R: 8, cA: '#5be36b', cB: '#d4ff8a' },
+      { x: hs[2].x, z: hs[2].z, R: 8, cA: '#66d9ff', cB: '#e0f7ff' }
+    ]);
 
     /* --- Vegetación (modelos livianos instanciados) --- */
     const veg = (cx, cz, rin, rout, m) => {
