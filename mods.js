@@ -486,6 +486,8 @@
       <div class="bmT">Herramientas</div>
       <div class="row"><button class="alt" data-t="heal">💚 Curar</button><button class="alt" data-t="kill">💀 Matar monstruos</button></div>
       <div class="row"><button class="alt" data-t="cd">⏱️ Sin recarga: NO</button><button class="alt" data-t="portal">🌀 Invocar portal</button></div>
+      <div class="row"><button class="alt" data-t="rune">🌑 Evento de runas</button><button class="alt" data-t="runeEnd">⏹ Cerrar evento</button></div>
+      <div class="row"><button class="alt" data-t="isl">🏝️ Ir a la isla</button></div>
       <div class="row"><button class="alt" data-t="sun">☀️ Día</button><button class="alt" data-t="night">🌙 Noche</button></div>
       <div class="bmT">Anuncio a todos los jugadores</div>
       <div class="row"><input id="bmAN" maxlength="120" placeholder="Mensaje global"><button id="bmAS">Enviar</button></div>
@@ -501,6 +503,9 @@
       if (t === 'heal') { G.me.hp = 100; G.me.en = 100; G.me.exh = false; }
       else if (t === 'kill') { (G.monsters || []).forEach(m => { try { if (!m.dead) G.hurt(m, 1e6, []); } catch (e) {} }); }
       else if (t === 'cd') { window.__noCd = !window.__noCd; b.textContent = '⏱️ Sin recarga: ' + (window.__noCd ? 'SÍ' : 'NO'); }
+      else if (t === 'rune') { window.__runeEvent && window.__runeEvent(true); }
+      else if (t === 'runeEnd') { window.__runeEvent && window.__runeEvent(false); }
+      else if (t === 'isl') { window.__goIsland && window.__goIsland(); }
       else if (t === 'portal') { try { G.spawnPortal(); } catch (e) {} }
       else if (t === 'sun' || t === 'night') { try { G.sun && (G.sun.intensity = t === 'sun' ? 1.6 : .15); } catch (e) {} }
     });

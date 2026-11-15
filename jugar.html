@@ -22,7 +22,7 @@
       "scene.remove(portal.g); portal = null; clearTimeout(window.__pt); window.__pt = setTimeout(() => { spawnPortal(); try { alertMsg('🌀 ¡El portal reapareció!', 'Volvé al final del camino del sur', 3200); } catch (e) {} }, 300000); wave.active = true;");
     rep('setTimeout(spawnPortal, 40000);', '/* el portal reaparece cada 5 min */');
     // límites del mapa más amplios para llegar a la aldea de runas
-    rep('me.x = Math.max(-WORLD, Math.min(WORLD, me.x));', 'me.x = Math.max(-125, Math.min(125, me.x));');
+    rep('me.x = Math.max(-WORLD, Math.min(WORLD, me.x)); me.z = Math.max(-WORLD, Math.min(ZMAX, me.z));', 'if (window.__isl) { const I = window.__isl, dx = me.x - I.x, dz = me.z - I.z, d = Math.hypot(dx, dz); if (d > I.r) { me.x = I.x + dx / d * I.r; me.z = I.z + dz / d * I.r; } } else { me.x = Math.max(-125, Math.min(125, me.x)); me.z = Math.max(-WORLD, Math.min(ZMAX, me.z)); }');
 
     // --- v2: menú, vuelo, personajes especiales ---
     rep("const snap = () => ({ x: +me.x.toFixed(2),", "const snap = () => ({ y: +(me.y || 0).toFixed(1), x: +me.x.toFixed(2),");
@@ -43,6 +43,7 @@
     rep('const charP = [];', "CHARS[3] = CHARS[0]; CHARS[5] = CHARS[0]; CHARS[4] = { file: '../char_elf', h: 1.75, eyeY: 1.6, eyeZ: 0.05, cut: 1.42, tip: 'RightHand', tipOff: 0.3 };\nconst charP = [];");
     rep("if (!o.isSkinnedMesh || o.name !== 'body') return;", "if (!o.isSkinnedMesh || (o.name !== 'body' && o.name !== 'char1' && o.name !== 'elf')) return;");
     rep('for (const c of gl.animations) acts[c.name] = mixer.clipAction(c);', "for (const c of gl.animations) acts[c.name] = mixer.clipAction(c); if (!acts.Walk && acts.walk) { acts.Walk = acts.walk; acts.Run = acts.run || acts.walk; try { const w = gl.animations.find(c => c.name === 'walk'); acts.Idle = mixer.clipAction(THREE.AnimationUtils.subclip(w, 'Idle', 0, 1, 24)); } catch (e) {} }");
+    rep('function castSpell() {', 'function castSpell() { if (window.__castHook && window.__castHook()) return;');
     // PWA
     rep('</head>', '<link rel="manifest" href="manifest.json"><meta name="theme-color" content="#0f1a0f"><meta name="mobile-web-app-capable" content="yes"><link rel="apple-touch-icon" href="icon-192.png"></head>');
     document.open(); document.write(html); document.close();
