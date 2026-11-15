@@ -167,7 +167,7 @@
     };
     veg(P.x, P.z, 9, 42, 1);       // alrededor del portal
     veg(hx, hz, 15, 40, 0.9);      // alrededor de la aldea de runas
-    W.cfg = { P, H, k };
+    W.cfg = { P, H, k, hs };
   }
 
   function worldPost(G) { // modelos del bosque encantado (más pesados): pocos, ya con bosque.js cargado
