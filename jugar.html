@@ -37,6 +37,12 @@
     rep('function makeAvatar(name, ci, local) {', 'function makeAvatar(name, ci, local) { if (window.__MODS && window.__MODS.makeCustom) { const c = window.__MODS.makeCustom(name, ci, local); if (c) return c; }');
     rep("camera.position.set(Math.sin(a) * 4.2, 1.5, 14 + Math.cos(a) * 4.2); camera.lookAt(0, 1.0, 14);\n    if (innerWidth > innerHeight) camera.translateX(2.0); else camera.translateY(-1.5);",
         "if (!(window.__MODS && window.__MODS.menuCam && window.__MODS.menuCam(camera, t, dt, preview))) { camera.position.set(Math.sin(a) * 4.2, 1.5, 14 + Math.cos(a) * 4.2); camera.lookAt(0, 1.0, 14);\n    if (innerWidth > innerHeight) camera.translateX(2.0); else camera.translateY(-1.5); }");
+
+    // --- v2.1: elfo + dragón ---
+    rep("const CLASSES = ['Goblin mago', 'Gnomo mago', 'Domador de dragones'];", "const CLASSES = ['Goblin mago', 'Gnomo mago', 'Domador de dragones', 'Serafín', 'Elfo explorador', 'Dragón'];");
+    rep('const charP = [];', "CHARS[3] = CHARS[0]; CHARS[5] = CHARS[0]; CHARS[4] = { file: '../char_elf', h: 1.75, eyeY: 1.6, eyeZ: 0.05, cut: 1.42, tip: 'RightHand', tipOff: 0.3 };\nconst charP = [];");
+    rep("if (!o.isSkinnedMesh || o.name !== 'body') return;", "if (!o.isSkinnedMesh || (o.name !== 'body' && o.name !== 'char1' && o.name !== 'elf')) return;");
+    rep('for (const c of gl.animations) acts[c.name] = mixer.clipAction(c);', "for (const c of gl.animations) acts[c.name] = mixer.clipAction(c); if (!acts.Walk && acts.walk) { acts.Walk = acts.walk; acts.Run = acts.run || acts.walk; try { const w = gl.animations.find(c => c.name === 'walk'); acts.Idle = mixer.clipAction(THREE.AnimationUtils.subclip(w, 'Idle', 0, 1, 24)); } catch (e) {} }");
     // PWA
     rep('</head>', '<link rel="manifest" href="manifest.json"><meta name="theme-color" content="#0f1a0f"><meta name="mobile-web-app-capable" content="yes"><link rel="apple-touch-icon" href="icon-192.png"></head>');
     document.open(); document.write(html); document.close();

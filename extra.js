@@ -34,7 +34,9 @@
     { i: '🧪', n: 'Goblin', cl: 'Goblin mago', d: 'Astuto y veloz, con su bastón de madera viva.', st: [3, 5, 4] },
     { i: '🔮', n: 'Gnomo', cl: 'Gnomo mago', d: 'Pequeño, ágil y lleno de trucos arcanos.', st: [2, 4, 5] },
     { i: '🐉', n: 'Domador', cl: 'Domador de dragones', d: 'Alto y resistente, criador de bestias.', st: [5, 3, 3] },
-    { i: '👁️', n: 'Serafín', cl: 'Serafín', d: 'Un ojo con seis alas. Vuela y domina la luz celestial. Sólo para el administrador.', st: [4, 4, 5], secret: true }
+    { i: '👁️', n: 'Serafín', cl: 'Serafín', d: 'Un ojo con seis alas. Vuela y domina la luz celestial. Sólo para el administrador.', st: [4, 4, 5], secret: true },
+    { i: '🏹', n: 'Elfo', cl: 'Elfo explorador', d: 'Ágil y sigiloso, arquero de los bosques.', st: [3, 4, 4] },
+    { i: '🐲', n: 'Dragón', cl: 'Wyvern', d: 'Una bestia alada. Camina por el suelo y vuela por todo el mapa.', st: [5, 3, 4] }
   ];
 
   /* ---------------- Estado ---------------- */
@@ -58,7 +60,7 @@
     .bmBack{align-self:flex-start;background:rgba(0,0,0,.55);border:1px solid #6b5a2a;color:#e9d58f;border-radius:20px;padding:8px 16px;font-weight:700}
     .bmH{font:800 22px system-ui;letter-spacing:2px;text-transform:uppercase;text-align:center;text-shadow:0 2px 8px #000;margin:8px 0;pointer-events:none!important}
     .bmPanel{margin-top:auto;background:rgba(12,16,12,.92);border:1px solid #7a6830;border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:10px;box-shadow:0 8px 30px #000a;max-height:76vh;overflow:auto}
-    .bmRow{display:flex;gap:8px}.bmRow>*{flex:1}
+    .bmRow{display:flex;gap:8px;flex-wrap:wrap}.bmRow>*{flex:1 1 28%}
     .bmCard{background:#2a3a2a;border:2px solid transparent;border-radius:12px;padding:10px 4px;text-align:center;font-size:13px;font-weight:700;color:#fff;min-width:0}
     .bmCard b{display:block;font-size:26px;margin-bottom:2px}.bmCard.sel{border-color:#ffd77a;background:#4f8a3a}.bmCard.sec{border-color:#b9a0ff;box-shadow:0 0 14px #8a6bff88}
     .bmGo{background:linear-gradient(#e8cf78,#c9a63c);color:#2a1a00;font-weight:900;letter-spacing:1px;border-radius:12px;padding:13px;font-size:16px}
@@ -195,7 +197,7 @@
   }
   function pickChar(i) {
     const g = G(); if (!g.me) return;
-    if (i < 3) { const b = document.querySelector('#chars button[data-c="' + i + '"]'); b && b.click(); } else { g.me.c = 3; g.showPreview && g.showPreview(); }
+    if (i < 3) { const b = document.querySelector('#chars button[data-c="' + i + '"]'); b && b.click(); } else { g.me.c = i; g.showPreview && g.showPreview(); }
     showCh(i);
   }
 
@@ -270,7 +272,7 @@
     window.__BUILD = { main: build.main, skills: (build.skills || []).slice(0, 4) };
     g.setSel && g.setSel([build.main]); $('settings').style.cssText = ''; $('settings').classList.remove('open');
     if (g.me) g.me.y = g.me.c === 3 ? 2.5 : 0;
-    if (g.me && g.me.c === 3) { const sv = $('sView'); sv.value = 'tp'; sv.dispatchEvent(new Event('change')); }
+    if (g.me && (g.me.c === 3 || g.me.c === 5)) { const sv = $('sView'); sv.value = 'tp'; sv.dispatchEvent(new Event('change')); }
     if (n === 0) $('solo').click(); else { const b = document.querySelector('.srv[data-s="' + n + '"]'); b && b.click(); }
   }
 
@@ -428,6 +430,61 @@
     g.scene.add(grp); return grp;
   }
 
+
+  /* =====================================================================
+     DRAGÓN (wyvern): esqueleto y animaciones armados por código
+     ===================================================================== */
+  let dragP = null;
+  const dragGLB = () => dragP || (dragP = G().loader.loadAsync('char_dragon.glb'));
+  const sstep = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  function makeDragon(name, local) {
+    const g = G(), T = g.THREE, grp = new T.Group(), S = .5;
+    grp.userData.h = 2.9; grp.userData.eyeY = 2.5; grp.userData.eyeZ = .6;
+    const lab = g.labelSprite(name || 'Dragón'); lab.position.y = 3.6; lab.visible = !local; grp.add(lab); grp.userData.label = lab;
+    const mic = g.iconSprite('🎤'); mic.position.set(.6, 3.3, 0); mic.visible = false; grp.add(mic); grp.userData.mic = mic;
+    const holder = new T.Group(); holder.scale.setScalar(S); grp.add(holder);
+    let B = null, sm = null, t = 0, ph = 0, fl = 0, wk = 0, lp = null;
+    dragGLB().then(gl => {
+      let mesh = null; gl.scene.traverse(o => { if (o.isMesh && !mesh) mesh = o; }); if (!mesh) return;
+      const defs = [['root', -1, 0, 2, 0], ['legL', 0, .4, 2, 0], ['legR', 0, -.4, 2, 0], ['wL1', 0, .55, 3.3, -.1], ['wL2', 3, 1.7, 3.7, -.1], ['wR1', 0, -.55, 3.3, -.1], ['wR2', 5, -1.7, 3.7, -.1], ['tail1', 0, 0, 1.3, -.7], ['tail2', 7, 0, .8, -1.8], ['neck', 0, 0, 3.9, .2]];
+      const bones = defs.map(d => { const b = new T.Bone(); b.name = d[0]; return b; }), wp = defs.map(d => [d[2], d[3], d[4]]);
+      defs.forEach((d, i) => { const p = d[1] >= 0 ? wp[d[1]] : [0, 0, 0]; bones[i].position.set(wp[i][0] - p[0], wp[i][1] - p[1], wp[i][2] - p[2]); if (d[1] >= 0) bones[d[1]].add(bones[i]); });
+      const geo = mesh.geometry, pos = geo.attributes.position, n = pos.count, si = new Uint16Array(n * 4), sw = new Float32Array(n * 4);
+      const W = new Float32Array(10), ord = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+      for (let v = 0; v < n; v++) {
+        const x = pos.getX(v), y = pos.getY(v), z = pos.getZ(v), ax = Math.abs(x), left = x >= 0;
+        const wing = sstep(.55, 1.2, ax) * sstep(.6, 1.0, y), outer = sstep(1.2, 2.0, ax);
+        const tailw = (1 - wing) * sstep(-.4, -1.0, z) * sstep(2.0, 1.2, y), neckw = (1 - wing) * sstep(3.9, 4.6, y);
+        const lw = (1 - wing) * (1 - tailw) * (1 - neckw) * sstep(2.5, 1.8, y), sL = sstep(-.1, .25, x);
+        W.fill(0);
+        W[left ? 3 : 5] = wing * (1 - outer); W[left ? 4 : 6] = wing * outer;
+        W[7] = tailw * (1 - sstep(-1.2, -2.2, z)); W[8] = tailw * sstep(-1.2, -2.2, z); W[9] = neckw * (1 - tailw);
+        W[1] = lw * sL; W[2] = lw * (1 - sL);
+        let sum = 0; for (let k = 0; k < 10; k++) sum += W[k]; W[0] = Math.max(0, 1 - sum);
+        ord.sort((a, b) => W[b] - W[a]); let tot = 0; for (let k = 0; k < 4; k++) tot += W[ord[k]];
+        for (let k = 0; k < 4; k++) { si[v * 4 + k] = ord[k]; sw[v * 4 + k] = tot > 0 ? W[ord[k]] / tot : (k ? 0 : 1); }
+      }
+      geo.setAttribute('skinIndex', new T.Uint16BufferAttribute(si, 4)); geo.setAttribute('skinWeight', new T.Float32BufferAttribute(sw, 4));
+      sm = new T.SkinnedMesh(geo, mesh.material); sm.frustumCulled = false; sm.castShadow = true; sm.add(bones[0]);
+      holder.add(sm); holder.updateMatrixWorld(true);
+      sm.bind(new T.Skeleton(bones), sm.matrixWorld); B = {}; bones.forEach(b => { B[b.name] = b; });
+    }).catch(e => console.warn('dragon', e));
+    grp.userData.mixer = { update(dt) {
+      t += dt; const p = grp.position; if (!lp) lp = p.clone(); const sp = Math.hypot(p.x - lp.x, p.z - lp.z) / Math.max(dt, .001), up = p.y > .35; lp.copy(p);
+      fl += ((up ? 1 : 0) - fl) * Math.min(1, dt * 6); wk += ((sp > .6 && !up ? 1 : 0) - wk) * Math.min(1, dt * 8);
+      const fp = local && $('sView') && $('sView').value === 'fp'; if (sm) sm.visible = !fp;
+      if (!B) return;
+      ph += dt * (up ? 7 : Math.min(sp, 9) * 1.5);
+      const flap = Math.sin(t * 7.5) * .62 - .05, rest = -.78 + Math.sin(t * 1.3) * .04, wa = rest + (flap - rest) * fl, wo = (-.6 + (Math.sin(t * 7.5 - .7) * .35 - .1 + .6) * fl);
+      B.wL1.rotation.z = wa; B.wR1.rotation.z = -wa; B.wL2.rotation.z = wo; B.wR2.rotation.z = -wo;
+      const sw2 = Math.sin(ph) * .5 * wk;
+      B.legL.rotation.x = sw2 * (1 - fl) + .7 * fl; B.legR.rotation.x = -sw2 * (1 - fl) + .7 * fl;
+      B.root.position.y = 2 + Math.abs(Math.sin(ph)) * .08 * wk + Math.sin(t * 2) * .06 * fl; B.root.rotation.x = .18 * fl; B.root.rotation.z = Math.sin(ph) * .03 * wk;
+      B.tail1.rotation.y = Math.sin(t * 1.6 + ph * .3) * .22; B.tail2.rotation.y = Math.sin(t * 1.6 + 1) * .3; B.neck.rotation.x = Math.sin(t * 1.1) * .05 - .1 * fl;
+    } };
+    g.scene.add(grp); return grp;
+  }
+
   /* ---------------- Bucle propio (vuelo, efectos, hotbar) ---------------- */
   let last = performance.now();
   function tick(now) {
@@ -436,13 +493,13 @@
     if (!g.me || $('lobby').style.display !== 'none') return;
     if (window.__BUILD) buildHotbar();
     if (g.mq && g.mq !== tick.mq) { tick.mq = g.mq; g.mq.on('message', (tp, buf) => { try { if (!g.srv || tp !== `${g.NS}S${g.srv}/fx`) return; const d = JSON.parse(new TextDecoder().decode(buf)); if (d && d.id !== g.rid && g.EL[d.e]) cast(d.k, d.e, vec(d.o), vec(d.t), false, d.id); } catch (e) {} }); }
-    const ang = g.me.c === 3;
+    const ang = g.me.c === 5 || (g.me.c === 3 && isAdmin());
     if (hb) { hb.style.display = 'flex'; hb.children.forEach ? 0 : 0; [...hb.children].forEach((b, i) => { const k = window.__BUILD.skills[i]; cds[i] = Math.max(0, (cds[i] || 0) - dt); b.lastChild.style.height = (k ? Math.min(100, cds[i] / KIND[k].cd * 100) : 0) + '%'; }); }
-    const fl = $('bmFly'); if (fl) fl.style.display = ang && TOUCH ? 'flex' : 'none';
+    const fl = $('bmFly'); if (fl) fl.style.display = ang && TOUCH ? 'flex' : 'none'; if (!ang && g.me.c === 3) g.me.c = 0;
     if (ang) { const dy = (fly.k || fly.t) * 9 * dt; g.me.y = Math.max(0, Math.min(90, (g.me.y || 0) + dy)); } else g.me.y = 0;
   }
   requestAnimationFrame(tick);
 
-  Object.assign(window.__MODS = window.__MODS || {}, { menuCam, makeCustom: (name, ci, local) => (ci === 3 ? makeAngel(name, local) : null) });
+  Object.assign(window.__MODS = window.__MODS || {}, { menuCam, makeCustom: (name, ci, local) => (ci === 3 ? makeAngel(name, local) : ci === 5 ? makeDragon(name, local) : null) });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', buildMenu); else buildMenu();
 })();
