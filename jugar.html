@@ -2,6 +2,8 @@
 <html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Batalla Mágica</title>
+<link rel="manifest" href="manifest.json"><meta name="theme-color" content="#0f1a0f"><link rel="apple-touch-icon" href="icon-192.png">
+<script>if("serviceWorker"in navigator)navigator.serviceWorker.register("sw.js").catch(function(){});</script>
 <style>body{margin:0;height:100vh;display:flex;align-items:center;justify-content:center;background:#0f1a0f;color:#fff;font-family:system-ui,sans-serif;text-align:center;padding:20px;box-sizing:border-box}a{color:#ffd77a}</style>
 </head><body><div id="s">⚔️ Cargando Batalla Mágica…</div>
 <script>
@@ -42,7 +44,7 @@
     rep("const CLASSES = ['Goblin mago', 'Gnomo mago', 'Domador de dragones'];", "const CLASSES = ['Goblin mago', 'Gnomo mago', 'Domador de dragones', 'Serafín', 'Elfo explorador', 'Dragón'];");
     rep('const charP = [];', "CHARS[3] = CHARS[0]; CHARS[5] = CHARS[0]; CHARS[4] = { file: '../char_elf', h: 1.75, eyeY: 1.6, eyeZ: 0.05, cut: 1.42, tip: 'RightHand', tipOff: 0.3 };\nconst charP = [];");
     rep("if (!o.isSkinnedMesh || o.name !== 'body') return;", "if (!o.isSkinnedMesh || (o.name !== 'body' && o.name !== 'char1' && o.name !== 'elf')) return;");
-    rep('for (const c of gl.animations) acts[c.name] = mixer.clipAction(c);', "for (const c of gl.animations) acts[c.name] = mixer.clipAction(c); if (!acts.Walk && acts.walk) { acts.Walk = acts.walk; acts.Run = acts.run || acts.walk; try { const w = gl.animations.find(c => c.name === 'walk'); acts.Idle = mixer.clipAction(THREE.AnimationUtils.subclip(w, 'Idle', 0, 1, 24)); } catch (e) {} }");
+    rep('for (const c of gl.animations) acts[c.name] = mixer.clipAction(c);', "for (const c of gl.animations) acts[c.name] = mixer.clipAction(c); if (!acts.Walk && acts.walk) { acts.Walk = acts.walk; acts.Run = acts.run || acts.walk; try { const tr = []; m.traverse(o => { if (o.isBone) { const p = o.position.toArray(), q = o.quaternion.toArray(); tr.push(new THREE.VectorKeyframeTrack(o.name + '.position', [0, 1], [...p, ...p]), new THREE.QuaternionKeyframeTrack(o.name + '.quaternion', [0, 1], [...q, ...q])); } }); acts.Idle = mixer.clipAction(new THREE.AnimationClip('Idle', 1, tr)); } catch (e) {} }");
     rep('function castSpell() {', 'function castSpell() { if (window.__castHook && window.__castHook()) return;');
     // PWA
     rep('</head>', '<link rel="manifest" href="manifest.json"><meta name="theme-color" content="#0f1a0f"><meta name="mobile-web-app-capable" content="yes"><link rel="apple-touch-icon" href="icon-192.png"></head>');

@@ -288,7 +288,7 @@
   function menuCam(camera, t, dt, preview) {
     const g = G(); if (preview) preview.visible = scr === 'char';
     if (orbG) orbG.visible = scr === 'magic';
-    if (scr === 'char') return false;
+    if (scr === 'char') { const c = g.me ? g.me.c : 0, f = c === 5 ? 2.3 : c === 3 ? 1.9 : 0; if (!f) return false; const a = Math.sin(t * .3) * .5; camera.position.set(Math.sin(a) * 4.2 * f, 1.5 * f, 14 + Math.cos(a) * 4.2 * f); camera.lookAt(0, 1.0 * f, 14); if (innerWidth > innerHeight) camera.translateX(2.0 * f); else camera.translateY(-1.5 * f); return true; }
     if (scr === 'magic') { layoutOrbs(dt || .016); camera.position.set(0, 1.7, 19.6); camera.lookAt(0, 1.5, 14); setFade(0); return true; }
     if (scr === 'skill') { camera.position.set(0, 1.7, 19.6); camera.lookAt(0, 1.5, 14); setFade(0); return true; }
     if (!shots) shots = SHOTS(); const D = 11, i = Math.floor(t / D) % shots.length, u = (t % D) / D, s = shots[i], a = s.a + u * .9;
@@ -510,7 +510,7 @@
       defs.forEach((d, i) => { const p = d[1] >= 0 ? wp[d[1]] : [0, 0, 0]; bones[i].position.set(wp[i][0] - p[0], wp[i][1] - p[1], wp[i][2] - p[2]); if (d[1] >= 0) bones[d[1]].add(bones[i]); });
       const geo = mesh.geometry, pos = geo.attributes.position, n = pos.count, si = new Uint16Array(n * 4), sw = new Float32Array(n * 4);
       const W = new Float32Array(10), ord = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
-      for (let v = 0; v < n; v++) {
+      if (geo.attributes.skinIndex) { /* ya calculado por otro dragón */ } else for (let v = 0; v < n; v++) {
         const x = pos.getX(v), y = pos.getY(v), z = pos.getZ(v), ax = Math.abs(x), left = x >= 0;
         const wing = sstep(.55, 1.2, ax) * sstep(.6, 1.0, y), outer = sstep(1.2, 2.0, ax);
         const tailw = (1 - wing) * sstep(-.4, -1.0, z) * sstep(2.0, 1.2, y), neckw = (1 - wing) * sstep(3.9, 4.6, y);
@@ -523,7 +523,7 @@
         ord.sort((a, b) => W[b] - W[a]); let tot = 0; for (let k = 0; k < 4; k++) tot += W[ord[k]];
         for (let k = 0; k < 4; k++) { si[v * 4 + k] = ord[k]; sw[v * 4 + k] = tot > 0 ? W[ord[k]] / tot : (k ? 0 : 1); }
       }
-      geo.setAttribute('skinIndex', new T.Uint16BufferAttribute(si, 4)); geo.setAttribute('skinWeight', new T.Float32BufferAttribute(sw, 4));
+      if (!geo.attributes.skinIndex) { geo.setAttribute('skinIndex', new T.Uint16BufferAttribute(si, 4)); geo.setAttribute('skinWeight', new T.Float32BufferAttribute(sw, 4)); }
       sm = new T.SkinnedMesh(geo, mesh.material); sm.frustumCulled = false; sm.castShadow = true; sm.add(bones[0]);
       holder.add(sm); holder.updateMatrixWorld(true);
       sm.bind(new T.Skeleton(bones), sm.matrixWorld); B = {}; bones.forEach(b => { B[b.name] = b; });
@@ -534,8 +534,8 @@
       const fp = local && $('sView') && $('sView').value === 'fp'; if (sm) sm.visible = !fp;
       if (!B) return;
       ph += dt * (up ? 7 : Math.min(sp, 9) * 1.5);
-      const flap = Math.sin(t * 7.5) * .62 - .05, rest = -.78 + Math.sin(t * 1.3) * .04, wa = rest + (flap - rest) * fl, wo = (-.6 + (Math.sin(t * 7.5 - .7) * .35 - .1 + .6) * fl);
-      B.wL1.rotation.z = wa; B.wR1.rotation.z = -wa; B.wL2.rotation.z = wo; B.wR2.rotation.z = -wo;
+      const fd = 1 - fl, flap = (Math.sin(t * 7.5) * .5 + .05) * fl - .15 * fd, fo = Math.sin(t * 7.5 - .7) * .3 * fl, br = Math.sin(t * 1.3) * .03;
+      B.wL1.rotation.set(0, 1.1 * fd, flap + br); B.wR1.rotation.set(0, -1.1 * fd, -flap - br); B.wL2.rotation.set(0, .9 * fd, fo); B.wR2.rotation.set(0, -.9 * fd, -fo);
       const sw2 = Math.sin(ph) * .5 * wk;
       B.legL.rotation.x = sw2 * (1 - fl) + .7 * fl; B.legR.rotation.x = -sw2 * (1 - fl) + .7 * fl;
       B.root.position.y = 2 + Math.abs(Math.sin(ph)) * .08 * wk + Math.sin(t * 2) * .06 * fl; B.root.rotation.x = .18 * fl; B.root.rotation.z = Math.sin(ph) * .03 * wk;
