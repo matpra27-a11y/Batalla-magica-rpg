@@ -252,7 +252,8 @@
       try { worldPre(G); } catch (e) { console.warn('mods.world', e); }
       try { perf(G); } catch (e) { console.warn('mods.perf', e); }
     },
-    post(G) { try { worldPost(G); } catch (e) { console.warn('mods.post', e); } }
+    post(G) { try { worldPost(G); } catch (e) { console.warn('mods.post', e); } },
+    cfg: () => W.cfg
   };
 
   /* =====================================================================
@@ -396,7 +397,7 @@
   }
 
   function onLogin(profile, main, auth) {
-    user = profile; auth.style.display = 'none'; main.style.display = '';
+    user = profile; auth.style.display = 'none'; main.style.display = window.__BM_MENU ? 'none' : '';
     const nm = $('name'); nm.value = (profile.is_admin ? '★' : '') + profile.username; nm.style.display = 'none';
     const who = document.createElement('div'); who.id = 'bmWho';
     who.innerHTML = `<span>👤 <b>${esc(profile.username)}</b>${profile.is_admin ? ' <span class="bmT">ADMIN</span>' : ''}</span><span><button class="alt" id="bmFrB">👥 Amigos</button> ${profile.is_admin ? '<button class="alt" id="bmAdB">🛠️</button> ' : ''}<button class="alt" id="bmOut">Salir</button></span>`;
@@ -415,6 +416,8 @@
       l.innerHTML = '🖼️ Calidad <select id="bmQ"><option value="auto">Automática</option><option value="high">Alta (más nítida)</option><option value="mid">Media</option><option value="low">Baja (más fluido)</option></select>';
       st.appendChild(l); const sel = $('bmQ'); sel.value = window.__getQ(); sel.onchange = () => window.__setQ(sel.value);
     }
+    window.__bm = { getUser: () => user, panel: togglePanel };
+    if (window.__BM_MENU && window.__menuStart) window.__menuStart(profile);
     API.heartbeat(); clearInterval(hbTimer); hbTimer = setInterval(() => API.heartbeat(), 60000);
   }
 
@@ -480,6 +483,10 @@
       <div class="bmT">Teletransporte</div>
       <div class="row"><button class="alt" data-tp="0,14">Plaza</button><button class="alt" data-tp="0,124">Portal</button><button class="alt" data-tp="HAM">Aldea runas</button></div>
       <button class="alt" id="bmGod">❤️ Vida y energía infinitas: NO</button>
+      <div class="bmT">Herramientas</div>
+      <div class="row"><button class="alt" data-t="heal">💚 Curar</button><button class="alt" data-t="kill">💀 Matar monstruos</button></div>
+      <div class="row"><button class="alt" data-t="cd">⏱️ Sin recarga: NO</button><button class="alt" data-t="portal">🌀 Invocar portal</button></div>
+      <div class="row"><button class="alt" data-t="sun">☀️ Día</button><button class="alt" data-t="night">🌙 Noche</button></div>
       <div class="bmT">Anuncio a todos los jugadores</div>
       <div class="row"><input id="bmAN" maxlength="120" placeholder="Mensaje global"><button id="bmAS">Enviar</button></div>
       <div class="bmT">Usuarios</div><button class="alt" id="bmAL">↻ Actualizar lista</button><div id="bmAU" style="display:flex;flex-direction:column;gap:6px"></div><div class="bmM" id="bmAM"></div>`;
@@ -488,6 +495,14 @@
       const G = window.__G; if (!G) return; let x, z;
       if (b.dataset.tp === 'HAM') { const H = W.cfg && W.cfg.H; if (!H) return; x = H.x + 17; z = H.z; } else [x, z] = b.dataset.tp.split(',').map(Number);
       G.me.x = x; G.me.z = z;
+    });
+    body.querySelectorAll('[data-t]').forEach(b => b.onclick = () => {
+      const G = window.__G; if (!G || !G.me) return; const t = b.dataset.t;
+      if (t === 'heal') { G.me.hp = 100; G.me.en = 100; G.me.exh = false; }
+      else if (t === 'kill') { (G.monsters || []).forEach(m => { try { if (!m.dead) G.hurt(m, 1e6, []); } catch (e) {} }); }
+      else if (t === 'cd') { window.__noCd = !window.__noCd; b.textContent = '⏱️ Sin recarga: ' + (window.__noCd ? 'SÍ' : 'NO'); }
+      else if (t === 'portal') { try { G.spawnPortal(); } catch (e) {} }
+      else if (t === 'sun' || t === 'night') { try { G.sun && (G.sun.intensity = t === 'sun' ? 1.6 : .15); } catch (e) {} }
     });
     $('bmGod').onclick = () => { god = !god; $('bmGod').textContent = '❤️ Vida y energía infinitas: ' + (god ? 'SÍ' : 'NO'); };
     setInterval(() => { const G = window.__G; if (god && G && G.me) { G.me.hp = 100; G.me.en = 100; G.me.exh = false; } }, 200);

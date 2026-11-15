@@ -9,13 +9,13 @@
   const s = document.getElementById('s');
   try {
     const get = (u, req) => fetch(u).then(r => { if (!r.ok) { if (req) throw new Error(u + ' (' + r.status + ')'); return ''; } return r.text(); }).catch(e => { if (req) throw e; return ''; });
-    let [html, mods, cfg] = await Promise.all([get('index.html', 1), get('mods.js', 1), get('config.js', 0)]);
+    let [html, mods, cfg, extra] = await Promise.all([get('index.html', 1), get('mods.js', 1), get('config.js', 0), get('extra.js', 0)]);
     const rep = (a, b) => { if (!html.includes(a)) { console.warn('parche no aplicado:', a.slice(0, 50)); return; } html = html.replace(a, () => b); };
-    const inline = (cfg + '\n' + mods).replace(/<\/script/gi, '<\\/script');
+    const inline = (cfg + '\n' + mods + '\n' + extra).replace(/<\/script/gi, '<\\/script');
     rep('</head>', '<script>' + inline + '<\/script></head>');
     // ganchos del mundo / optimización (corren antes de armar el bosque)
     rep('spawnPortal(); loadPack();',
-      "try{window.__G={THREE,scene,renderer,camera,sun,me,queue,instance,colliders,pathSegs,blocked,mulberry32,TOUCH,PORTAL,remotes,circleTex,addRing,addGlow};window.__MODS&&window.__MODS.pre(window.__G);}catch(e){console.warn('mods',e)} spawnPortal(); loadPack();");
+      "try{window.__G={THREE,scene,renderer,camera,sun,me,queue,instance,colliders,pathSegs,blocked,mulberry32,TOUCH,PORTAL,remotes,circleTex,addRing,addGlow,EL,hurt,addCircle,addBeam,sparks,labelSprite,iconSprite,monsters,loader,sfx,alertMsg,spawnPortal,showPreview,setSel:v=>{sel=v;renderSel();},get mq(){return mq},get srv(){return srv},NS,get rid(){return rid}};window.__MODS&&window.__MODS.pre(window.__G);}catch(e){console.warn('mods',e)} spawnPortal(); loadPack();");
     rep('packState = 2; buildForest();', "packState = 2; buildForest(); try{window.__MODS&&window.__MODS.post(window.__G)}catch(e){console.warn('mods',e)}");
     // el portal vuelve a aparecer 5 minutos después de explotar (y ya no a los 40 s de la victoria)
     rep('scene.remove(portal.g); portal = null; wave.active = true;',
@@ -23,7 +23,24 @@
     rep('setTimeout(spawnPortal, 40000);', '/* el portal reaparece cada 5 min */');
     // límites del mapa más amplios para llegar a la aldea de runas
     rep('me.x = Math.max(-WORLD, Math.min(WORLD, me.x));', 'me.x = Math.max(-125, Math.min(125, me.x));');
+
+    // --- v2: menú, vuelo, personajes especiales ---
+    rep("const snap = () => ({ x: +me.x.toFixed(2),", "const snap = () => ({ y: +(me.y || 0).toFixed(1), x: +me.x.toFixed(2),");
+    rep('r.tx = s.x; r.tz = s.z;', 'r.tx = s.x; r.tz = s.z; r.ty = +s.y || 0;');
+    rep('p.x += (r.tx - p.x) * t; p.z += (r.tz - p.z) * t;', 'p.x += (r.tx - p.x) * t; p.z += (r.tz - p.z) * t; p.y += ((r.ty || 0) - p.y) * t;');
+    rep('me.avatar.position.set(me.x, 0, me.z);', 'me.avatar.position.set(me.x, me.y || 0, me.z);');
+    rep('camera.position.set(me.x + fx0 * ez, ey, me.z + fz0 * ez);', 'camera.position.set(me.x + fx0 * ez, ey + (me.y || 0), me.z + fz0 * ez);');
+    rep('Math.max(0.5, ty - Math.sin(p) * d), me.z', 'Math.max(0.5, (me.y || 0) + ty - Math.sin(p) * d), me.z');
+    rep('camera.lookAt(me.x, ty, me.z);', 'camera.lookAt(me.x, ty + (me.y || 0), me.z);');
+    rep('function pick(k) { if (!EL[k]) return;', "function pick(k) { if (!EL[k]) return; if (k === 'sagrado' && !(me.c === 3 && window.__bm && window.__bm.getUser() && window.__bm.getUser().is_admin)) return alertMsg('✨ Sagrado', 'Sólo el Serafín (admin)', 1500);");
+    rep("function hitMe(d) { sfx('sword', 0.6); me.hp = Math.max(0, me.hp - d);", "function hitMe(d) { d = Math.round(d * (window.__shieldK ? window.__shieldK() : 1)); sfx('sword', 0.6); me.hp = Math.max(0, me.hp - d);");
+    rep('function makeAvatar(name, ci, local) {', 'function makeAvatar(name, ci, local) { if (window.__MODS && window.__MODS.makeCustom) { const c = window.__MODS.makeCustom(name, ci, local); if (c) return c; }');
+    rep("camera.position.set(Math.sin(a) * 4.2, 1.5, 14 + Math.cos(a) * 4.2); camera.lookAt(0, 1.0, 14);\n    if (innerWidth > innerHeight) camera.translateX(2.0); else camera.translateY(-1.5);",
+        "if (!(window.__MODS && window.__MODS.menuCam && window.__MODS.menuCam(camera, t, dt, preview))) { camera.position.set(Math.sin(a) * 4.2, 1.5, 14 + Math.cos(a) * 4.2); camera.lookAt(0, 1.0, 14);\n    if (innerWidth > innerHeight) camera.translateX(2.0); else camera.translateY(-1.5); }");
+    // PWA
+    rep('</head>', '<link rel="manifest" href="manifest.json"><meta name="theme-color" content="#0f1a0f"><meta name="mobile-web-app-capable" content="yes"><link rel="apple-touch-icon" href="icon-192.png"></head>');
     document.open(); document.write(html); document.close();
+    try { if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js'); } catch (e) {}
   } catch (e) {
     s.innerHTML = '⚠️ No se pudo cargar: ' + String(e.message).replace(/</g, '&lt;') + '<br><br>Revisá que <b>index.html</b>, <b>mods.js</b> y <b>config.js</b> estén subidos en el mismo lugar.<br><a href="index.html">Abrir la versión original</a>';
   }
