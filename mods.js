@@ -167,7 +167,11 @@
     };
     veg(P.x, P.z, 9, 42, 1);       // alrededor del portal
     veg(hx, hz, 15, 40, 0.9);      // alrededor de la aldea de runas
-    W.cfg = { P, H, k, hs };
+    // lugares ocultos con un círculo mágico (guardianes)
+    const sec = [{ x: -110, z: -52 }, { x: 108, z: -48 }, { x: 112, z: 104 }, { x: -104, z: 132 }];
+    sec.forEach(q => veg(q.x, q.z, 7, 24, 0.8));
+    runes(G, sec.map((q, i) => ({ x: q.x, z: q.z, R: 6, cA: ['#c06bff', '#6bd0ff', '#ffd86b', '#ff6bd6'][i], cB: '#ffffff' })));
+    W.cfg = { P, H, k, hs, sec };
   }
 
   function worldPost(G) { // modelos del bosque encantado (más pesados): pocos, ya con bosque.js cargado
