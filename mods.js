@@ -18,7 +18,7 @@
       while (list.length < n && tries++ < n * 40) {
         const a = rng() * 6.283, rr = Math.sqrt(rin * rin + rng() * (rout * rout - rin * rin));
         const x = cx + Math.cos(a) * rr, z = cz + Math.sin(a) * rr;
-        if (Math.abs(x) > 118 || z > 162 || z < -68) continue;
+        if (Math.abs(x) > 200 || Math.abs(z) > 200) continue;
         if (G.blocked(x, z, o.pad ?? 1)) continue;
         const s = 0.8 + rng() * 0.45;
         list.push({ x, z, r: rng() * 6.28, s });
@@ -170,6 +170,17 @@
     // lugares ocultos con un círculo mágico (guardianes)
     const sec = [{ x: -110, z: -52 }, { x: 108, z: -48 }, { x: 112, z: 104 }, { x: -104, z: 132 }];
     sec.forEach(q => veg(q.x, q.z, 7, 24, 0.8));
+    // relleno: bosque repartido por todo el mundo ampliado
+    const fill = (cx, cz, r) => {
+      area('lp_pine_tall', N(5), cx, cz, 0, r, { h: 12, col: 0.5, pad: 1.2 }); area('lp_pine_tree', N(7), cx, cz, 0, r, { h: 8, col: 0.5, pad: 1.2 });
+      area('lp_round_tree', N(4), cx, cz, 0, r, { h: 6.5, col: 0.5, pad: 1.2 }); area('lp_birch_tree', N(3), cx, cz, 0, r, { h: 7.5, col: 0.4, pad: 1.2 });
+      area('lp_bush_round', N(8), cx, cz, 0, r, { h: 1.3, col: 0.5, pad: 1 }); area('lp_bush_berries', N(4), cx, cz, 0, r, { h: 1.2, col: 0.45, pad: 1 });
+      area('lp_fern', N(14), cx, cz, 0, r, { h: 0.9, pad: 0.4 }); area('lp_grass_tuft', N(22), cx, cz, 0, r, { h: 0.7, pad: 0.2 });
+      area('lp_flower_red', N(3), cx, cz, 0, r, { h: 0.5, pad: 0.4 }); area('lp_flower_yellow', N(3), cx, cz, 0, r, { h: 0.5, pad: 0.4 }); area('lp_flower_purple', N(3), cx, cz, 0, r, { h: 0.5, pad: 0.4 });
+      area('lp_rock_small', N(2), cx, cz, 0, r, { w: 1.0, pad: 0.4 }); area('lp_boulder_mossy', N(1), cx, cz, 0, r, { w: 2.2, col: 1.0, pad: 1.5 });
+    };
+    for (let gx = -180; gx <= 180; gx += 45) for (let gz = -180; gz <= 180; gz += 45) if (Math.hypot(gx, gz) > 26) fill(gx + (Math.abs(gz) % 90 ? 12 : 0), gz, 32);
+
     runes(G, sec.map((q, i) => ({ x: q.x, z: q.z, R: 6, cA: ['#c06bff', '#6bd0ff', '#ffd86b', '#ff6bd6'][i], cB: '#ffffff' })));
     W.cfg = { P, H, k, hs, sec };
   }

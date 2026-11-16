@@ -24,7 +24,7 @@
       "scene.remove(portal.g); portal = null; clearTimeout(window.__pt); window.__pt = setTimeout(() => { spawnPortal(); try { alertMsg('🌀 ¡El portal reapareció!', 'Volvé al final del camino del sur', 3200); } catch (e) {} }, 300000); wave.active = true;");
     rep('setTimeout(spawnPortal, 40000);', '/* el portal reaparece cada 5 min */');
     // límites del mapa más amplios para llegar a la aldea de runas
-    rep('me.x = Math.max(-WORLD, Math.min(WORLD, me.x)); me.z = Math.max(-WORLD, Math.min(ZMAX, me.z));', 'if (window.__isl) { const I = window.__isl, dx = me.x - I.x, dz = me.z - I.z, d = Math.hypot(dx, dz); if (d > I.r) { me.x = I.x + dx / d * I.r; me.z = I.z + dz / d * I.r; } } else { me.x = Math.max(-125, Math.min(125, me.x)); me.z = Math.max(-WORLD, Math.min(ZMAX, me.z)); }');
+    rep('me.x = Math.max(-WORLD, Math.min(WORLD, me.x)); me.z = Math.max(-WORLD, Math.min(ZMAX, me.z));', 'if (window.__isl) { const I = window.__isl, dx = me.x - I.x, dz = me.z - I.z, d = Math.hypot(dx, dz); if (d > I.r) { me.x = I.x + dx / d * I.r; me.z = I.z + dz / d * I.r; } } else { me.x = Math.max(-200, Math.min(200, me.x)); me.z = Math.max(-200, Math.min(200, me.z)); }');
 
     // --- v2: menú, vuelo, personajes especiales ---
     rep("const snap = () => ({ x: +me.x.toFixed(2),", "const snap = () => ({ w: window.__sword | 0, h: window.__halo ? 1 : 0, y: +(me.y || 0).toFixed(1), x: +me.x.toFixed(2),");
@@ -49,6 +49,8 @@
     // RPG: daño, experiencia, velocidad, 10 jugadores
     rep('function hurt(m, d, st = []) {\n  if (m.dead) return;', 'function hurt(m, d, st = []) {\n  if (m.dead) return; d *= (window.__dmgK ? window.__dmgK() : 1);');
     rep("m.dead = true; m.g.remove(m.bar.s); mplay(m, 'death');", "m.dead = true; m.g.remove(m.bar.s); mplay(m, 'death'); try { window.__onKill && window.__onKill(m); } catch (e) {}");
+    rep("$('hpTxt').textContent = 'Vida ' + me.hp;", "{ const mh = window.__maxHp ? window.__maxHp() : 100; $('hpTxt').textContent = 'Vida ' + Math.round(me.hp * mh / 100) + '/' + mh; }");
+    rep("$('enTxt').textContent = 'Energía ' + e;", "{ const mn = window.__maxEn ? window.__maxEn() : 100; $('enTxt').textContent = 'Energía ' + Math.round(e * mn / 100) + '/' + mn; }");
     rep('spd = (run ? 8 : 5.5) * mag;', 'spd = (run ? 8 : 5.5) * mag * (window.__spdK ? window.__spdK() : 1);');
     rep('const MAXP = 8, NS', 'const MAXP = 10, NS');
     // muerte en la isla del cielo
