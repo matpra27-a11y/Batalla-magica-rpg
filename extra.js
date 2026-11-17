@@ -73,6 +73,7 @@
   };
   const KINDS = [], KIND = {}, LVL = [1, 2, 4, 7, 10, 14];
   Object.keys(KS).forEach(el => KS[el].forEach((a, j) => { const x = { k: el + '_' + (j + 1), i: a[0], n: a[1], nm: a[1], d: a[2], cd: a[3], en: a[4], lv: a[5], b: a[6], p: a[7], only: [el], x: 1, fixed: a[6] === 'runas' ? 1 : 0 }; KINDS.push(x); KIND[x.k] = x; }));
+  const allOf = el => KINDS.filter(x => x.only[0] === el).map(x => x.k);
   const skillName = (k) => KIND[k] ? KIND[k].nm : k;
   const myLvl = () => (window.__lvl ? window.__lvl() : 1);
   const lvOk = x => isAdmin() || myLvl() >= x.lv;
@@ -184,7 +185,7 @@
     root.querySelectorAll('[data-back]').forEach(b => b.onclick = () => go(scr === 'skill' ? 'magic' : scr === 'serv' ? 'skill' : 'main'));
     $('bmPrev').onclick = () => step(-1); $('bmNext').onclick = () => step(1);
     $('bmOrbOk').onclick = () => { build = Object.assign(build || {}, { main: list[oi] }); picked = new Set([...picked].filter(k => KIND[k])); go('skill'); };
-    $('bmSkOk').onclick = () => { build.skills = [...picked]; try { localStorage.setItem('bm_build', JSON.stringify(build)); } catch (e) {} go('serv'); };
+    $('bmSkOk').onclick = () => { build.skills = allOf(build.main); try { localStorage.setItem('bm_build', JSON.stringify(build)); } catch (e) {} go('serv'); };
     $('bmCOk').onclick = () => go('main');
     $('bmRef').onclick = () => $('refresh').click();
     $('bmSolo').onclick = () => enter(0);
@@ -295,11 +296,11 @@
   function skillScreen() {
     const k = build.main, E = G().EL[k]; $('bmSkH').textContent = E.e + ' Habilidades de ' + E.n;
     const L = $('bmSkL'); L.innerHTML = '';
-    const upd = () => { $('bmSkC').textContent = `Elegí hasta 4 habilidades · ${picked.size}/4`; $('bmSkOk').disabled = picked.size === 0; };
-    picked.forEach(q => { if (!KIND[q] || KIND[q].only.indexOf(k) < 0 || !lvOk(KIND[q])) picked.delete(q); }); if (!picked.size) picked.add(k + '_1');
+    const upd = () => { $('bmSkC').textContent = 'Tus 6 habilidades se desbloquean al subir de nivel'; $('bmSkOk').disabled = false; };
+    
     KINDS.filter(x => x.only.indexOf(k) >= 0).forEach(x => {
-      const lk = !lvOk(x); const b = document.createElement('button'); b.className = 'bmSk' + (picked.has(x.k) ? ' sel' : ''); if (lk) b.style.opacity = .5; b.innerHTML = `<b>${x.i}</b><div><div style="font-weight:800">${esc(skillName(x.k, k))}${lk ? ' 🔒 Nivel ' + x.lv : ''}</div><span>${esc(x.d)} · ${x.cd}s · ⚡${x.en}</span></div>`;
-      b.onclick = () => { if (lk) return G().alertMsg('🔒 Bloqueada', 'Subí al nivel ' + x.lv + ' matando monstruos', 1400); if (picked.has(x.k)) picked.delete(x.k); else if (picked.size < 4) picked.add(x.k); else return; b.classList.toggle('sel', picked.has(x.k)); upd(); };
+      const lk = !lvOk(x); const b = document.createElement('button'); b.className = 'bmSk' + (lk ? '' : ' sel'); if (lk) b.style.opacity = .5; b.innerHTML = `<b>${x.i}</b><div><div style="font-weight:800">${esc(skillName(x.k, k))}${lk ? ' 🔒 Nivel ' + x.lv : ''}</div><span>${esc(x.d)} · ${x.cd}s · ⚡${x.en}</span></div>`;
+      b.onclick = () => { if (lk) G().alertMsg('🔒 Bloqueada', 'Subí al nivel ' + x.lv + ' matando monstruos', 1400); };
       L.appendChild(b);
     });
     upd();
@@ -333,7 +334,7 @@
   }
   function enter(n) {
     const g = G(); if (!build || !build.main) return;
-    window.__BUILD = { main: build.main, skills: (build.skills || []).filter(k => KIND[k] && KIND[k].only[0] === build.main).slice(0, 4) };
+    window.__BUILD = { main: build.main, skills: allOf(build.main) };
     g.setSel && g.setSel([build.main]); $('settings').style.cssText = ''; $('settings').classList.remove('open');
     if (g.me) g.me.y = isAng(g.me.c) ? 2.5 : 0;
     if (g.me && isAng(g.me.c)) { const sv = $('sView'); sv.value = 'tp'; sv.dispatchEvent(new Event('change')); }
@@ -647,7 +648,7 @@
     const g = G(), B = window.__BUILD; if (!B || !g.me || !g.me.avatar || $('lobby').style.display !== 'none') return;
     if (i === B.skills.length && window.__halo) return holy();
     const k = B.skills[i]; if (!k || (cds[i] || 0) > 0) return;
-    if (B.main === 'sagrado' && !(isAng(g.me.c) && isAdmin())) return;
+    if (B.main === 'sagrado' && !isAdmin()) return;
     const K = KIND[k]; if (!lvOk(K)) return g.alertMsg('🔒 Habilidad bloqueada', 'Necesitás nivel ' + K.lv, 1200); const cost = K.fixed ? K.en : Math.max(4, Math.round(K.en * (window.__costK ? window.__costK() : 1))); if (g.me.en < cost) return g.alertMsg('⚡ Sin energía', 'Esperá un momento', 900);
     g.me.en -= cost; cds[i] = window.__noCd ? 0 : K.cd; const { o, t } = aim(), big = (isAng(g.me.c) && isAdmin()) ? 1.6 : 1;
     cast(k, B.main, o, t, true, undefined, big); send(k, B.main, o, t, big); g.sfx('spell34', .5);
@@ -662,10 +663,10 @@
   /* --- selección de habilidad dentro del libro de hechizos --- */
   function buildBook() {
     const B = window.__BUILD, sp = $('spells'); if (!B || !sp || (sp._sk && sp._halo === !!window.__halo)) return; sp._sk = 1; sp._halo = !!window.__halo; const oldb = $('bmSkBox'); if (oldb) oldb.remove(); const oc = $('bmSel'); if (oc) oc.remove();
-    const st = document.createElement('style'); st.textContent = '.bmsk{width:76px;height:62px;border-radius:12px;padding:0;font-size:22px;line-height:1.1;background:rgba(60,35,10,.78);color:#fff;border:2px solid transparent}.bmsk small{display:block;font-size:9px;margin-top:2px;overflow:hidden;white-space:nowrap}.bmsk.on{border-color:#ffd77a;background:rgba(79,138,58,.92)}#bmSel{position:fixed;left:50%;transform:translateX(-50%);bottom:6px;z-index:3;pointer-events:none;background:rgba(0,0,0,.55);color:#ffe9a8;border:1px solid #7a6830;border-radius:14px;padding:3px 12px;font:700 12px system-ui;white-space:nowrap}'; document.head.appendChild(st);
+    const st = document.createElement('style'); st.textContent = '.bmsk{width:76px;height:62px;border-radius:12px;padding:0;font-size:22px;line-height:1.1;background:rgba(60,35,10,.78);color:#fff;border:2px solid transparent}.bmsk small{display:block;font-size:9px;margin-top:2px;overflow:hidden;white-space:nowrap}.bmsk.on{border-color:#ffd77a;background:rgba(79,138,58,.92)}#bmSel{position:fixed;left:50%;transform:translateX(-50%);bottom:6px;z-index:3;pointer-events:none;background:rgba(0,0,0,.55);color:#ffe9a8;border:1px solid #7a6830;border-radius:14px;padding:3px 12px;font:700 12px system-ui;white-space:nowrap}'; st.textContent += '#spells .sp,#spells>div:first-child:not(#bmSkBox){display:none!important}'; document.head.appendChild(st);
     const box = document.createElement('div'); box.id = 'bmSkBox'; box.style.cssText = 'width:100%;display:flex;gap:6px;flex-wrap:wrap;justify-content:center;border-top:2px solid #6b4a1f;padding-top:6px;margin-top:4px';
     box.innerHTML = '<div style="width:100%;text-align:center;font:700 12px serif;color:#4a2f10">⚡ Habilidades · elegí cuál lanza tu toque</div>';
-    const items = [{ i: '📖', n: 'Hechizo' }].concat(B.skills.map(k => ({ i: KIND[k].i, n: KIND[k].n }))).concat(window.__halo ? [{ i: '☀️', n: 'Sagrado' }] : []); const btns = [];
+    const items = [{ i: '📖', n: 'Hechizo' }].concat(B.skills.map(k => ({ i: KIND[k].i, n: KIND[k].n + (lvOk(KIND[k]) ? '' : ' 🔒' + KIND[k].lv) }))).concat(window.__halo ? [{ i: '☀️', n: 'Sagrado' }] : []); const btns = [];
     items.forEach((x, j) => { const b = document.createElement('button'); b.className = 'bmsk'; b.innerHTML = x.i + '<small>' + esc(x.n) + '</small>'; b.onclick = () => { selSk = j - 1; paint(); }; box.appendChild(b); btns.push(b); });
     sp.appendChild(box);
     const chip = document.createElement('div'); chip.id = 'bmSel'; document.body.appendChild(chip);
@@ -761,7 +762,7 @@
   async function spawnBoss() {
     const g = G(), T = g.THREE; if (IS.boss || EV.bossDead || !EV.inIsl) return;
     const m = await seraphModel(3.2); if (IS.boss || !EV.inIsl) return;
-    const grp = new T.Group(); grp.position.set(IC.x, 8, IC.z + 30); grp.add(m.root); const gl = spr(0xffe9a0, 44, .45); gl.position.z = -2; grp.add(gl); isl.add(grp);
+    const grp = new T.Group(); grp.position.set(IC.x, 20, IC.z + 30); grp.add(m.root); const gl = spr(0xffe9a0, 44, .45); gl.position.z = -2; grp.add(gl); isl.add(grp);
     const hpB = 14000 + 3500 * Math.min(9, g.remotes.size), f = IS.boss = { g: grp, h: 16, rad: 11, dead: false, ready: true, hp: hpB, max: hpB, a: Math.random() * 6.28, sw: 0, swT: 9, upd: m.upd, t: 0, at: 3, foe: { hit(d) { bossHit(d, true); } } }; FOES.push(f); bossHud(1);
   }
   async function spawnMini(i) {
@@ -809,9 +810,9 @@
     }
     const b = IS.boss; if (b && !b.dead) {
       b.t += dt; const rage = b.hp < b.max * .5, p = b.g.position, rr = 34 + Math.sin(b.t * .23) * 9;
-      b.a += dt * (rage ? .42 : .3); b.swT -= dt; if (b.swT <= 0 && !b.sw) { b.sw = 4.5; b.swT = rage ? 8 : 13; }
-      let ty = 11 + Math.sin(b.t * .7) * 2; if (b.sw > 0) { b.sw -= dt; const k = Math.sin(Math.max(0, b.sw) / 4.5 * Math.PI); ty = 11 - k * 8; if (b.sw <= 0) b.sw = 0; }
-      p.x = IC.x + Math.cos(b.a) * rr; p.z = IC.z + Math.sin(b.a) * rr; p.y += (ty - p.y) * Math.min(1, dt * 2.5);
+      b.a += dt * (rage ? .42 : .3); b.swT -= dt; if (b.swT <= 0 && !b.sw) { b.sw = 4.5; b.swT = rage ? 12 : 20; }
+      let ty = 23 + Math.sin(b.t * .7) * 4; if (b.sw > 0) { b.sw -= dt; const k = Math.sin(Math.max(0, b.sw) / 4.5 * Math.PI); ty = 23 - k * 15; if (b.sw <= 0) b.sw = 0; }
+      p.x = IC.x + Math.cos(b.a) * rr; p.z = IC.z + Math.sin(b.a) * rr; p.y += (ty - p.y) * Math.min(1, dt * 1.5); b.g.rotation.z = Math.sin(b.t * .8) * .12;
       b.g.rotation.y += (Math.atan2(me.x - p.x, me.z - p.z) - b.g.rotation.y) * Math.min(1, dt * 1.2); b.upd(b.t);
       b.at -= dt; IS.nova -= dt;
       if (b.at <= 0) {
@@ -1006,7 +1007,11 @@
   }
   requestAnimationFrame(tick);
 
-  window.__bmT = { cast, startEvent, beginEnd, enterIsland, leaveIsland, makeOrnate, useSkill, watchFx, foesUpdate, bossHit, FOES, ringsModel, seraphModel, boltFx, impact, later, live, spr, R, aim, makePortal, tune, loadM, isAng, cast0, near, buildBook, live };
+  function setElement(el) {
+    const g = G(); if (!g.EL[el] || !build) return; build.main = el; try { localStorage.setItem('bm_build', JSON.stringify(build)); } catch (e) {}
+    const B = window.__BUILD; if (B) { B.main = el; B.skills = allOf(el); } selSk = -1; cds.length = 0; const sp = $('spells'); if (sp) sp._sk = 0; g.setSel && g.setSel([el]); g.alertMsg('Poder cambiado', g.EL[el].n, 1500);
+  }
+  window.__bmT = { setElement, cast, startEvent, beginEnd, enterIsland, leaveIsland, makeOrnate, useSkill, watchFx, foesUpdate, bossHit, FOES, ringsModel, seraphModel, boltFx, impact, later, live, spr, R, aim, makePortal, tune, loadM, isAng, cast0, near, buildBook, live };
   Object.assign(window.__MODS = window.__MODS || {}, { menuCam, makeCustom: (name, ci, local) => (ci === 6 ? makeOrnate('rings', name, local) : ci === 7 ? makeOrnate('seraph', name, local) : null) });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', buildMenu); else buildMenu();
 })();

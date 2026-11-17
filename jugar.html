@@ -51,6 +51,8 @@
     rep("m.dead = true; m.g.remove(m.bar.s); mplay(m, 'death');", "m.dead = true; m.g.remove(m.bar.s); mplay(m, 'death'); try { window.__onKill && window.__onKill(m); } catch (e) {}");
     rep("$('hpTxt').textContent = 'Vida ' + me.hp;", "{ const mh = window.__maxHp ? window.__maxHp() : 100; $('hpTxt').textContent = 'Vida ' + Math.round(me.hp * mh / 100) + '/' + mh; }");
     rep("$('enTxt').textContent = 'Energía ' + e;", "{ const mn = window.__maxEn ? window.__maxEn() : 100; $('enTxt').textContent = 'Energía ' + Math.round(e * mn / 100) + '/' + mn; }");
+    rep('scene.add(ground);', 'ground.material.polygonOffset = true; ground.material.polygonOffsetFactor = 6; ground.material.polygonOffsetUnits = 6; scene.add(ground);');
+    rep('new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 400)', 'new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.3, 400)');
     rep('spd = (run ? 8 : 5.5) * mag;', 'spd = (run ? 8 : 5.5) * mag * (window.__spdK ? window.__spdK() : 1);');
     rep('const MAXP = 8, NS', 'const MAXP = 10, NS');
     // muerte en la isla del cielo

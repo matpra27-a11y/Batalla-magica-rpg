@@ -172,10 +172,10 @@
     sec.forEach(q => veg(q.x, q.z, 7, 24, 0.8));
     // relleno: bosque repartido por todo el mundo ampliado
     const fill = (cx, cz, r) => {
-      area('lp_pine_tall', N(5), cx, cz, 0, r, { h: 12, col: 0.5, pad: 1.2 }); area('lp_pine_tree', N(7), cx, cz, 0, r, { h: 8, col: 0.5, pad: 1.2 });
-      area('lp_round_tree', N(4), cx, cz, 0, r, { h: 6.5, col: 0.5, pad: 1.2 }); area('lp_birch_tree', N(3), cx, cz, 0, r, { h: 7.5, col: 0.4, pad: 1.2 });
-      area('lp_bush_round', N(8), cx, cz, 0, r, { h: 1.3, col: 0.5, pad: 1 }); area('lp_bush_berries', N(4), cx, cz, 0, r, { h: 1.2, col: 0.45, pad: 1 });
-      area('lp_fern', N(14), cx, cz, 0, r, { h: 0.9, pad: 0.4 }); area('lp_grass_tuft', N(22), cx, cz, 0, r, { h: 0.7, pad: 0.2 });
+      area('lp_pine_tall', N(2), cx, cz, 0, r, { h: 12, col: 0.5, pad: 1.2 }); area('lp_pine_tree', N(3), cx, cz, 0, r, { h: 8, col: 0.5, pad: 1.2 });
+      area('lp_round_tree', N(2), cx, cz, 0, r, { h: 6.5, col: 0.5, pad: 1.2 }); area('lp_birch_tree', N(1), cx, cz, 0, r, { h: 7.5, col: 0.4, pad: 1.2 });
+      area('lp_bush_round', N(4), cx, cz, 0, r, { h: 1.3, col: 0.5, pad: 1 }); area('lp_bush_berries', N(2), cx, cz, 0, r, { h: 1.2, col: 0.45, pad: 1 });
+      area('lp_fern', N(7), cx, cz, 0, r, { h: 0.9, pad: 0.4 }); area('lp_grass_tuft', N(14), cx, cz, 0, r, { h: 0.7, pad: 0.2 });
       area('lp_flower_red', N(3), cx, cz, 0, r, { h: 0.5, pad: 0.4 }); area('lp_flower_yellow', N(3), cx, cz, 0, r, { h: 0.5, pad: 0.4 }); area('lp_flower_purple', N(3), cx, cz, 0, r, { h: 0.5, pad: 0.4 });
       area('lp_rock_small', N(2), cx, cz, 0, r, { w: 1.0, pad: 0.4 }); area('lp_boulder_mossy', N(1), cx, cz, 0, r, { w: 2.2, col: 1.0, pad: 1.5 });
     };
@@ -498,6 +498,7 @@
       <div class="bmT">Teletransporte</div>
       <div class="row"><button class="alt" data-tp="0,14">Plaza</button><button class="alt" data-tp="0,124">Portal</button><button class="alt" data-tp="HAM">Aldea runas</button></div>
       <button class="alt" id="bmGod">❤️ Vida y energía infinitas: NO</button>
+      <div style="font-size:12px;margin:6px 0 2px">🔮 Cambiar poder</div><div class="row" id="bmEl" style="flex-wrap:wrap"></div>
       <div class="bmT">Herramientas</div>
       <div class="row"><button class="alt" data-t="heal">💚 Curar</button><button class="alt" data-t="kill">💀 Matar monstruos</button></div>
       <div class="row"><button class="alt" data-t="cd">⏱️ Sin recarga: NO</button><button class="alt" data-t="portal">🌀 Invocar portal</button></div>
@@ -524,6 +525,7 @@
       else if (t === 'portal') { try { G.spawnPortal(); } catch (e) {} }
       else if (t === 'sun' || t === 'night') { try { G.sun && (G.sun.intensity = t === 'sun' ? 1.6 : .15); } catch (e) {} }
     });
+    [['fuego', '🔥'], ['hielo', '❄️'], ['veneno', '☠️'], ['naturaleza', '🌿'], ['sombra', '🌑'], ['arcano', '🔮'], ['sangre', '🩸'], ['sagrado', '✨']].forEach(([k, e]) => { const b = document.createElement('button'); b.className = 'alt'; b.textContent = e + ' ' + k; b.onclick = () => { window.__bmT && window.__bmT.setElement(k); }; $('bmEl').appendChild(b); });
     $('bmGod').onclick = () => { god = !god; $('bmGod').textContent = '❤️ Vida y energía infinitas: ' + (god ? 'SÍ' : 'NO'); };
     setInterval(() => { const G = window.__G; if (god && G && G.me) { G.me.hp = 100; G.me.en = 100; G.me.exh = false; } }, 200);
     $('bmAS').onclick = () => { const t = $('bmAN').value.trim(); if (t) { announce(t); $('bmAN').value = ''; $('bmAM').textContent = 'Anuncio enviado.'; } };
